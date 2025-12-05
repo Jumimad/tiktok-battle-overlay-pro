@@ -20,6 +20,7 @@ function App() {
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
     const [toasts, setToasts] = useState([]);
     const [showSessionModal, setShowSessionModal] = useState(false);
+    const [appVersion, setAppVersion] = useState('Loading...');
 
     // --- NUEVO: ESTADO PARA ACTUALIZACIONES ---
     const [updateInfo, setUpdateInfo] = useState(null);
@@ -58,6 +59,10 @@ function App() {
             if (isValid === true && !alreadyShown) {
                 setShowSessionModal(true);
             }
+        };
+
+        const onAppVersion = (e, version) => {
+            setAppVersion(version); // Guardamos la versión que nos dio el backend
         };
 
         // 2. ESTADO COMPLETO (Al iniciar)
@@ -105,6 +110,7 @@ function App() {
 
         // SUSCRIPCIONES
         ipcRenderer.on('license-status', onLicense);
+        ipcRenderer.on('app-version', onAppVersion);
         ipcRenderer.on('full-state-data', onFullState);
         ipcRenderer.on('stats-update', onStatsUpdate);
         ipcRenderer.on('config:updated', onConfigUpdated);
@@ -124,6 +130,7 @@ function App() {
             ipcRenderer.removeAllListeners('config:updated');
             ipcRenderer.removeAllListeners('update_available');
             ipcRenderer.removeAllListeners('update_downloaded');
+            ipcRenderer.removeAllListeners('app-version')
         };
     }, []);
 
@@ -210,7 +217,7 @@ function App() {
                         {activeTab === 'config' && <ConfigTab onShowToast={addToast} />}
                         {activeTab === 'test' && <TestTab />}
                     </div>
-                    <div className="footer">✨ TikBattle OS v2.0 - Licencia Activa ✅ - by jinchu</div>
+                    <div className="footer">✨ TikBattle OS v{appVersion} - Licencia Activa ✅ - by jinchu</div>
                 </div>
             </div>
             <ToastContainer toasts={toasts} />

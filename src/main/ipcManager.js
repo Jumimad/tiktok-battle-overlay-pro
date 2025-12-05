@@ -1,4 +1,4 @@
-const { ipcMain, shell, dialog, net } = require('electron');
+const { ipcMain, shell, dialog, net, app } = require('electron'); // Asegúrate de importar 'app' aquí
 const ConfigService = require('./services/ConfigService');
 const CHANNELS = require('../shared/channels');
 const crypto = require('crypto');
@@ -82,11 +82,9 @@ function setupIPC(mainWindow, server, tikClient, battleService, giftService) {
     });
 
     // --- NUEVO: OBTENER ESTADO COMPLETO AL INICIO ---
-    // Esto es lo que arregla el "Conectando..." infinito y los datos en 0
     ipcMain.on('request-full-state', (event) => {
         if (tikClient) {
             const fullState = tikClient.getFullState();
-            // Respondemos inmediatamente con: { status: 'connected', stats: { taps: 100, ... } }
             event.reply('full-state-data', fullState);
         }
     });
@@ -111,6 +109,10 @@ function setupIPC(mainWindow, server, tikClient, battleService, giftService) {
 
         event.reply('config-loaded', conf);
         event.reply('license-status', isValid);
+
+        // --- AÑADIDO: ENVIAR VERSIÓN DE LA APP ---
+        // Esto permite que el footer muestre la versión real del package.json
+        event.reply('app-version', app.getVersion());
     });
 
     ipcMain.on(CHANNELS.CONFIG.SAVE, async (event, config) => {
