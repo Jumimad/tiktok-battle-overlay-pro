@@ -7,7 +7,7 @@
   "author": "By Jinchu",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TU_USUARIO/TU_REPO.git"
+    "url": "https://github.com/Jumimad/tiktok-battle-overlay-pro.git"
   },
   "scripts": {
     "start": "electron .",
