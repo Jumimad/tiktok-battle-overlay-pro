@@ -43,8 +43,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "TU_USUARIO",
-        "repo": "TU_REPO"
+        "owner": "Jumimad",
+        "repo": "tiktok-battle-overlay-pro"
       }
     ],
     "files": [
