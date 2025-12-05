@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ranking de Equipos</title>
+    <link id="main-stylesheet" rel="stylesheet" href="tabla_style.css">
+</head>
+<body>
+
+<div id="leaderboard-container"></div>
+
+<div id="total-container">
+    <div class="total-row">
+        <span class="total-name">TOTAL</span>
+        <span class="total-score" id="total-score-text">0</span>
+    </div>
+</div>
+
+<script src="common.js"></script>
+<script>
+    function handleConfig(configData) {
+        const layout = configData.layout || {};
+        const totalContainer = document.getElementById('total-container');
+
+        if (layout.tabla_show_total === false) {
+            totalContainer.classList.add('hidden');
+        } else {
+            totalContainer.classList.remove('hidden');
+        }
+
+        buildLeaderboard();
+    }
+
+    function handleStreamScores(scoresData, isInitialLoad) {
+        updateLeaderboard(isInitialLoad);
+    }
+
+    function buildLeaderboard() {
+        const container = document.getElementById('leaderboard-container');
+        if (!container || !currentSettings || !currentSettings.teams) return;
+
+        container.innerHTML = '';
+
+        currentSettings.teams.forEach((team) => {
+            if (team.active === false) return;
+
+            const teamScore = currentStreamScores[team.id] || 0;
+
+            // --- LÓGICA DE ICONO CORREGIDA (Reflejo exacto de Batalla) ---
+            let iconHTML = '';
+            let iconSrc = team.icon; // La ruta guardada en config
+
+            if (iconSrc) {
+                // CASO 1: Es una ruta de Windows/Mac (C:\... o /Users/...)
+                if (iconSrc.includes(':') || iconSrc.includes('\\') || iconSrc.startsWith('/')) {
+                    // Usamos el puente del servidor para leer archivos locales
+                    // encodeURIComponent es vital para rutas con espacios
+                    iconSrc = `/local-image?path=${encodeURIComponent(iconSrc)}`;
+                }
+                // CASO 2: Es solo un nombre de archivo (ej: "default.png")
+                else if (!iconSrc.startsWith('http')) {
+                    iconSrc = `assets/icons/${iconSrc}`;
+                }
+                // CASO 3: Es una URL (http...), se deja igual.
+
+                iconHTML = `<img src="${iconSrc}" class="team-icon">`;
+            } else {
+                // Si no hay imagen, mostramos el placeholder de color
+                iconHTML = `<div class="team-icon-placeholder" style="background-color:${team.color}"></div>`;
+            }
+            // -----------------------------------------------------------
+
+            const teamRow = document.createElement('div');
+            teamRow.className = 'team-row';
+            teamRow.id = `team-row-${team.id}`;
+
+            teamRow.innerHTML = `
+                    <div class="team-bar-bg"></div>
+                    <div class="team-bar-fill" id="team-bar-${team.id}"></div>
+                    <div class="team-content">
+                        ${iconHTML}
+                        <span class="team-name">${team.name.toUpperCase()}</span>
+                        <span class="team-score" id="team-score-${team.id}">${teamScore}</span>
+                    </div>
+                `;
+
+            const barEl = teamRow.querySelector('.team-bar-fill');
+            if (barEl) {
+                barEl.style.backgroundColor = team.color || '#505050';
+            }
+
+            container.appendChild(teamRow);
+        });
+
+        updateLeaderboard(true);
+    }
+
+    function updateLeaderboard(isInitialLoad = false) {
+        if (!currentSettings.teams) return;
+
+        let totalScore = 0;
+        let teamsData = [];
+
+        for (const team of currentSettings.teams) {
+            if (team.active === false) continue;
+
+            const score = currentStreamScores[team.id] || 0;
+            totalScore += score;
+            teamsData.push({ id: team.id, score: score });
+
+            const scoreEl = document.getElementById(`team-score-${team.id}`);
+            if (scoreEl) {
+                const startValue = parseInt(scoreEl.innerText) || 0;
+                if (isInitialLoad) { scoreEl.innerText = score; }
+                else if (startValue !== score) { animateValue(scoreEl, startValue, score, 500); }
+            }
+        }
+
+        const totalScoreEl = document.getElementById('total-score-text');
+        if (totalScoreEl) {
+            const startValue = parseInt(totalScoreEl.innerText) || 0;
+            if (isInitialLoad) { totalScoreEl.innerText = totalScore; }
+            else if (startValue !== totalScore) { animateValue(totalScoreEl, startValue, totalScore, 500); }
+        }
+
+        teamsData.sort((a, b) => b.score - a.score);
+        const maxScore = teamsData.length > 0 ? teamsData[0].score : 1;
+
+        teamsData.forEach((team, index) => {
+            const rowEl = document.getElementById(`team-row-${team.id}`);
+            const barEl = document.getElementById(`team-bar-${team.id}`);
+
+            if (rowEl) rowEl.style.order = index;
+
+            if (barEl) {
+                let widthPercent = 0;
+                if (maxScore > 0) {
+                    widthPercent = (team.score / maxScore) * 100;
+                }
+                widthPercent = Math.max(widthPercent, 2);
+                barEl.style.width = widthPercent + '%';
+            }
+        });
+    }
+</script>
+</body>
+</html>

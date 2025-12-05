@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Overlay Batalla Final Fija</title>
+    <link id="main-stylesheet" rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="main-container">
+    <div id="top-info-bar"></div>
+    <div id="multi-goal-bar"></div>
+    <div id="timer-display" class="hidden">00:00</div>
+</div>
+
+<div id="winner-celebration" class="hidden">
+    <div id="winner-box">
+        <div id="winner-title">¡Ganador!</div>
+        <div id="winner-name">---</div>
+    </div>
+</div>
+
+<script src="common.js"></script>
+<script>
+    function applyLayout(layout) {
+        if (!layout) return;
+        const r = document.querySelector(':root');
+        if(layout.overlay_padding_top !== undefined) r.style.setProperty('--pad-top', `${layout.overlay_padding_top}px`);
+        if(layout.container_width !== undefined) r.style.setProperty('--cont-width', `${layout.container_width}%`);
+        if(layout.bar_height !== undefined) r.style.setProperty('--bar-height', `${layout.bar_height}px`);
+        if(layout.icon_size !== undefined) r.style.setProperty('--icon-size', `${layout.icon_size}px`);
+        if(layout.gift_size !== undefined) r.style.setProperty('--gift-size', `${layout.gift_size}px`);
+        if(layout.font_size !== undefined) r.style.setProperty('--font-size', `${layout.font_size}px`);
+        if(layout.timer_top_margin !== undefined) r.style.setProperty('--timer-margin', `${layout.timer_top_margin}px`);
+        if(layout.timer_font_size !== undefined) r.style.setProperty('--timer-font', `${layout.timer_font_size}px`);
+    }
+
+    function fixPath(path) {
+        if (!path) return '';
+        if (path.startsWith('http')) return path;
+        return `/local-image?path=${encodeURIComponent(path)}`;
+    }
+
+    function handleConfig(config) {
+        if(typeof currentSettings !== 'undefined') currentSettings = config;
+        applyLayout(config.layout);
+        const l = config.layout || {};
+
+        const multiGoalBar = document.getElementById('multi-goal-bar');
+        multiGoalBar.innerHTML = '';
+
+        if (!config.teams) return;
+        const activeTeams = config.teams.filter(t => t.active !== false);
+
+        activeTeams.forEach((team, index) => {
+            // 1. SEGMENTO BASE
+            const segment = document.createElement('div');
+            segment.className = 'bar-segment';
+            segment.id = `segment-${team.id}`;
+            segment.style.width = (100 / activeTeams.length) + '%';
+
+            // 2. FONDO DE COLOR
+            const visualBg = document.createElement('div');
+            visualBg.className = 'visual-bg';
+            visualBg.style.backgroundColor = team.color;
+            segment.appendChild(visualBg);
+
+            // 3. SURFING WRAPPER (Headers)
+            const surfWrapper = document.createElement('div');
+            surfWrapper.className = 'surfing-wrapper';
+
+            // Lógica: Eq 1 Fijo a la Izquierda, Eq 2 Surfea
+            if (index === 0) surfWrapper.classList.add('surf-left-team');
+            else surfWrapper.classList.add('surf-right-team');
+
+            // --- HEADER: ICONO + NOMBRE ---
+            const topRow = document.createElement('div');
+            topRow.className = 'info-top-row';
+
+            const iconSrc = fixPath(team.icon);
+            const htmlProfile = (l.show_team_icon !== false && team.icon)
+                ? `<img src="${iconSrc}" class="player-icon" onerror="this.style.display='none'">`
+                : '';
+
+            // Degradado para el nombre
+            let bgGradient = (index === 0)
+                ? `linear-gradient(90deg, ${team.color} 50%, transparent 100%)`
+                : `linear-gradient(90deg, ${team.color} 50%, transparent 100%)`;
+
+            const htmlName = `<span class="player-name" style="background: ${bgGradient}; color: white;">${team.name}</span>`;
+
+            topRow.innerHTML = htmlProfile + htmlName;
+
+
+            // --- REGALOS ---
+            const bottomRow = document.createElement('div');
+            bottomRow.className = 'info-bottom-row';
+
+            let htmlGifts = '';
+            if (l.show_gift_icon !== false) {
+                if (team.giftIcon_high) {
+                    const gLow = fixPath(team.giftIcon_low);
+                    const gMid = fixPath(team.giftIcon_mid);
+                    const gHigh = fixPath(team.giftIcon_high);
+                    htmlGifts = `
+                        <div class="gift-cluster">
+                            <div class="gift-item sub"><img src="${gLow}"></div>
+                            <div class="gift-item sub"><img src="${gMid}"></div>
+                            <div class="gift-item main"><img src="${gHigh}"></div>
+                        </div>
+                    `;
+                } else if (team.giftIcon) {
+                    htmlGifts = `<img src="${fixPath(team.giftIcon)}" class="top-gift-icon">`;
+                }
+            }
+            bottomRow.innerHTML = htmlGifts;
+
+            surfWrapper.appendChild(topRow);
+            surfWrapper.appendChild(bottomRow);
+            segment.appendChild(surfWrapper);
+
+
+            // 4. SCORE (PUNTAJE) - CAMBIO AQUI
+            const segmentScore = document.createElement('span');
+            segmentScore.className = 'segment-score';
+            segmentScore.id = `bar-score-${team.id}`;
+            segmentScore.innerText = '0';
+
+            // SIEMPRE A LA IZQUIERDA (Para todos los equipos)
+            segmentScore.style.left = '20px';
+            segmentScore.style.right = 'auto';
+            segmentScore.style.textAlign = 'left';
+
+            segment.appendChild(segmentScore);
+            multiGoalBar.appendChild(segment);
+        });
+
+        if(typeof currentScores !== 'undefined') handleScores(currentScores, true);
+    }
+
+    function handleScores(scores, isInitialLoad) {
+        const teams = currentSettings.teams ? currentSettings.teams.filter(t => t.active!==false) : [];
+        if (teams.length === 0) return;
+        let total = 0;
+        teams.forEach(t => total += (scores[t.id] || 0));
+        const basePercent = 15.0;
+        const remaining = 100 - (basePercent * teams.length);
+        teams.forEach(team => {
+            const s = scores[team.id] || 0;
+            const txt = document.getElementById(`bar-score-${team.id}`);
+            const seg = document.getElementById(`segment-${team.id}`);
+            if(txt) {
+                const start = parseInt(txt.innerText)||0;
+                if(start!==s && typeof animateValue==='function') animateValue(txt, start, s, 500);
+                else txt.innerText = s;
+            }
+            if(seg) {
+                let w = basePercent;
+                if(total>0) w += (s/total)*remaining;
+                else w = 100/teams.length;
+                seg.style.width = w + '%';
+            }
+        });
+    }
+
+    function handleTimer(s, r, p) {
+        const el = document.getElementById('timer-display');
+        if(s<=0 || isNaN(s)) { el.classList.add('hidden'); return; }
+        el.classList.remove('hidden');
+        const m = Math.floor(s/60).toString().padStart(2,'0');
+        const sec = Math.floor(s%60).toString().padStart(2,'0');
+        el.innerText = `${m}:${sec}`;
+    }
+
+    function handleWinner(w) {
+        const el = document.getElementById('winner-celebration');
+        if(w) {
+            document.getElementById('winner-name').innerText = w.name;
+            document.getElementById('winner-name').style.color = w.color;
+            el.classList.remove('hidden');
+            el.classList.add('visible');
+            setTimeout(() => { el.classList.remove('visible'); el.classList.add('hidden'); }, 5000);
+        } else { el.classList.remove('visible'); el.classList.add('hidden'); }
+    }
+    window.handleConfig = handleConfig;
+    window.handleScores = handleScores;
+    window.handleTimer = handleTimer;
+    window.handleWinner = handleWinner;
+</script>
+</body>
+</html>

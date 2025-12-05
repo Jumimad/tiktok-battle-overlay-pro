@@ -1,0 +1,136 @@
+/*
+ * Hoja de estilos para metatotal.html (Versión SVG Definitiva)
+ */
+
+body {
+    background-color: transparent;
+    font-family: 'Teko', sans-serif;
+    color: white;
+    text-transform: uppercase;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-weight: 600;
+}
+
+#goal-overlay-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+    text-align: center;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+}
+
+#goal-name {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 0px;
+}
+
+/* --- ESTILOS DEL NUEVO SVG --- */
+
+#star-svg {
+    width: 200px; /* Tamaño que teníamos antes */
+    height: 200px;
+    /*filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));*/
+    animation: star-pulse 2s infinite ease-in-out;
+}
+
+/* El fondo de "vidrio" del corazón (Capa 1 - Abajo) */
+#star-svg-bg {
+    fill: rgba(255, 255, 255, 0.3); /* Vidrio gris semitransparente */
+}
+
+/* El "líquido" de color base (Capa 2 - Arriba) */
+#star-svg-fill {
+    fill: #ffc800; /* Color por defecto */
+    /* ¡CORREGIDO! Transición para 'y' Y 'height' */
+    transition: y 0.5s cubic-bezier(0.25, 1, 0.5, 1), height 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Contorno de la estrella */
+#star-outline {
+    fill: none;
+    stroke: #ffc800; /* Color por defecto */
+    stroke-width: 30px;
+    stroke-linejoin: round;
+}
+
+/* El texto del porcentaje (Capa 3 - Encima de todo) */
+#star-svg-percent {
+    font-family: 'Teko', sans-serif;
+    font-size: 150px; /* Ajuste manual para el corazón */
+    font-weight: 700;
+    fill: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+    text-anchor: middle;
+    dominant-baseline: middle;
+    transform: translateY(15px); /* Ajuste vertical fino */
+}
+
+/* --- FIN DE ESTILOS SVG --- */
+
+
+/* Textos de progreso */
+#progress-text {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+#next-goal-text {
+    font-size: 20px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+
+/* Alerta de "Meta Alcanzada" */
+#goal-met-alert {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.5);
+    background-color: rgba(0, 0, 0, 0.8);
+    border: 2px solid #ffc800;
+    border-radius: 20px;
+    padding: 20px 40px;
+    z-index: 200;
+    opacity: 0;
+    transition: all 0.3s ease-out;
+    pointer-events: none;
+}
+#goal-met-alert.visible {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+#goal-met-text { font-size: 40px; color: #ffc800; }
+#goal-met-stars { font-size: 30px; color: #ffc800; animation: goal-stars 1s infinite alternate; }
+@keyframes goal-stars {
+    from { transform: scale(1); opacity: 0.7; }
+    to { transform: scale(1.2); opacity: 1; }
+}
+
+/* Animación de latido */
+@keyframes star-pulse {
+    0% { transform: scale(1); }
+    15% { transform: scale(1.05); }
+    30% { transform: scale(1); }
+    100% { transform: scale(1); }
+}
+
+/* Clase de utilidad */
+.hidden {
+    display: none !important;
+}
+/* Línea blanca */
+.linea {
+  fill: none;
+  stroke: #fff9ca;
+  stroke-width: 41px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

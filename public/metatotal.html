@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Meta Total - Estrella</title>
+    <link rel="stylesheet" href="metatotal_style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Teko:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div id="goal-overlay-container">
+
+    <div id="goal-name">Meta Global</div>
+
+    <svg id="star-svg" viewBox="0 0 1080 1080">
+        <defs>
+            <clipPath id="star-clip">
+                <path d="M576.94,144.66l119.18,191.86c5.99,9.64,15.51,16.56,26.53,19.28l219.3,54.06
+                    c31.3,7.72,43.62,45.62,22.83,70.26l-145.64,172.63c-7.32,8.67-10.96,19.87-10.13,31.19l16.36,225.27
+                    c2.33,32.04-31.72,56.78-60.66,44.08l-207.62-91.12c-10.44-4.58-22.37-4.58-32.81,0l-207.62,91.12
+                    c-28.94,12.7-62.99-12.04-60.66-44.08l16.36-225.27c.83-11.32-2.81-22.52-10.13-31.19l-145.64-172.63
+                    c-20.79-24.64-8.47-62.54,22.83-70.26l219.3-54.06c11.02-2.72,20.54-9.64,26.53-19.28l119.18-191.86
+                    c16.64-26.79,55.27-26.79,71.9,0Z"/>
+            </clipPath>
+        </defs>
+
+        <g clip-path="url(#star-clip)">
+            <rect id="star-svg-bg" width="1080" height="1080" fill="rgba(255,255,255,0.2)" />
+
+            <rect id="star-svg-fill" width="1080" height="1080" y="1080" />
+        </g>
+
+        <path id="star-outline" fill="none" stroke-width="35" stroke-linejoin="round"
+              d="M576.94,144.66l119.18,191.86c5.99,9.64,15.51,16.56,26.53,19.28l219.3,54.06
+                c31.3,7.72,43.62,45.62,22.83,70.26l-145.64,172.63c-7.32,8.67-10.96,19.87-10.13,31.19l16.36,225.27
+                c2.33,32.04-31.72,56.78-60.66,44.08l-207.62-91.12c-10.44-4.58-22.37-4.58-32.81,0l-207.62,91.12
+                c-28.94,12.7-62.99-12.04-60.66-44.08l16.36-225.27c.83-11.32-2.81-22.52-10.13-31.19l-145.64-172.63
+                c-20.79-24.64-8.47-62.54,22.83-70.26l219.3-54.06c11.02-2.72,20.54-9.64,26.53-19.28l119.18-191.86
+                c16.64-26.79,55.27-26.79,71.9,0Z"/>
+        <!-- Línea blanca original -->
+        <polyline class="linea" points="596.71 310.61 652.64 419.97 787.41 447.28" />
+
+        <text id="star-svg-percent" x="50%" y="58%" text-anchor="middle" dominant-baseline="middle">0%</text>
+    </svg>
+
+    <div id="progress-text">0 / 0</div>
+    <div id="next-goal-text">Siguiente: ...</div>
+
+    <div id="goal-met-alert" class="hidden">
+        <div id="goal-met-stars">⭐</div>
+        <div id="goal-met-text">¡META LOGRADA!</div>
+    </div>
+
+</div>
+
+<script src="common.js"></script>
+<script>
+    const goalNameEl = document.getElementById('goal-name');
+    const starFillEl = document.getElementById('star-svg-fill');
+    const starOutlineEl = document.getElementById('star-outline');
+    const starPercentEl = document.getElementById('star-svg-percent');
+    const progressTextEl = document.getElementById('progress-text');
+    const nextGoalTextEl = document.getElementById('next-goal-text');
+    const goalMetAlertEl = document.getElementById('goal-met-alert');
+
+    const formatter = new Intl.NumberFormat('en-US');
+    const VIEWBOX_HEIGHT = 1080;
+
+    // Escuchamos el evento TOTAL_POINTS_UPDATE
+    function handleTotalPointsUpdate(data) {
+        if (!data) return;
+
+        goalNameEl.innerText = data.currentGoalName || "Meta";
+
+        const curStr = formatter.format(data.currentPoints);
+        const goalStr = formatter.format(data.currentGoalPoints);
+        progressTextEl.innerText = `${curStr} / ${goalStr}`;
+
+        nextGoalTextEl.innerText = data.nextGoalName || "";
+
+        const percent = Math.max(0, Math.min(100, data.percent));
+        starPercentEl.textContent = `${Math.floor(percent)}%`;
+
+        // Llenado vertical
+        const yPosition = VIEWBOX_HEIGHT - (VIEWBOX_HEIGHT * (percent / 100));
+        starFillEl.setAttribute('y', yPosition);
+        starFillEl.setAttribute('height', VIEWBOX_HEIGHT);
+
+        // Color
+        const fillColor = data.fillColor || '#FFD700';
+        starFillEl.setAttribute('fill', fillColor);
+        starOutlineEl.setAttribute('stroke', fillColor);
+
+        // Alerta
+        if (data.goalJustMet) {
+            triggerGoalAlert();
+            // Reset visual rápido
+            if (percent < 100) {
+                starFillEl.style.transition = 'none';
+                starFillEl.setAttribute('y', VIEWBOX_HEIGHT);
+                setTimeout(() => {
+                    starFillEl.style.transition = 'y 0.5s cubic-bezier(0.25, 1, 0.5, 1)';
+                }, 50);
+            }
+        }
+    }
+
+    function triggerGoalAlert() {
+        if (goalMetAlertEl.classList.contains('visible')) return;
+        goalMetAlertEl.classList.remove('hidden');
+        goalMetAlertEl.classList.add('visible');
+        setTimeout(() => {
+            goalMetAlertEl.classList.remove('visible');
+            goalMetAlertEl.classList.add('hidden');
+        }, 4000);
+    }
+</script>
+</body>
+</html>

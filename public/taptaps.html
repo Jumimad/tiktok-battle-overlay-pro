@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Overlay de Tap-Taps (Versión SVG Corazón)</title>
+    <link rel="stylesheet" href="taptaps_style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Teko:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="taps-overlay-container">
+
+        <div id="goal-name">Cargando Meta...</div>
+
+        <svg id="heart-svg" viewBox="0 0 1080 1080">
+            <defs>
+                <clipPath id="heart-clip">
+                    <path d="M883.02,577c.03.08,0,.17-.06.23l-310.12,310.12c-18.05,18.05-47.32,18.07-65.39.03
+                    -85.76-85.61-310.4-310.16-310.4-310.16-.06-.06-.09-.14-.06-.22-42.4-42.17-68.66-100.57-68.66-165.1
+                    0-128.59,104.23-232.82,232.8-232.82,71.89,0,136.17,32.59,178.87,83.78
+                    42.71-51.2,106.98-83.78,178.88-83.78,128.57,0,232.8,104.23,232.8,232.82
+                    0,64.53-26.26,122.93-68.66,165.09Z"/>
+                </clipPath>
+            </defs>
+
+            <g clip-path="url(#heart-clip)">
+
+                <rect id="heart-svg-bg" width="1080" height="1080" />
+
+                <rect id="heart-svg-fill" width="1080" height="1080" />
+
+                <path id="heart-stroke" class="heart-stroke"
+                    d="M657.63,269.81c19.37-9.61,40.91-14.76,63.14-14.76,56.53,0,105.45,33.17,128.33,81.08"/>
+            </g>
+
+            <path id="heart-outline" class="heart-outline"
+                d="M883.02,577c.03.08,0,.17-.06.23l-310.12,310.12c-18.05,18.05-47.32,18.07-65.39.03
+                -85.76-85.61-310.4-310.16-310.4-310.16-.06-.06-.09-.14-.06-.22-42.4-42.17-68.66-100.57-68.66-165.1
+                0-128.59,104.23-232.82,232.8-232.82,71.89,0,136.17,32.59,178.87,83.78
+                42.71-51.2,106.98-83.78,178.88-83.78,128.57,0,232.8,104.23,232.8,232.82
+                0,64.53-26.26,122.93-68.66,165.09Z"/>
+
+            <text id="heart-svg-percent" x="50%" y="50%">0%</text>
+        </svg>
+
+        <div id="progress-text">0 / 0</div>
+
+        <div id="next-goal-text">Siguiente: ...</div>
+
+        <div id="goal-met-alert" class="hidden">
+            <div id="goal-met-stars">✨</div>
+            <div id="goal-met-text">¡Meta Alcanzada!</div>
+        </div>
+
+    </div>
+
+    <script src="common.js"></script>
+    <script>
+        const goalNameEl = document.getElementById('goal-name');
+        const heartFillEl = document.getElementById('heart-svg-fill');
+        const heartStrokeEl = document.getElementById('heart-stroke'); // Nuevo elemento de trazo
+        const heartOutlineEl = document.getElementById('heart-outline'); // Nuevo elemento de contorno
+        const heartPercentEl = document.getElementById('heart-svg-percent');
+        const progressTextEl = document.getElementById('progress-text');
+        const nextGoalTextEl = document.getElementById('next-goal-text');
+        const goalMetAlertEl = document.getElementById('goal-met-alert');
+
+        const formatter = new Intl.NumberFormat('en-US', {
+            notation: 'compact',
+            compactDisplay: 'short'
+        });
+
+        // --- ¡CONSTANTE CLAVE! La altura total del viewBox. ---
+        const VIEWBOX_HEIGHT = 1080;
+        // -----------------------------------------------------
+
+        function handleTapUpdate(data) {
+            if (!data || data.error) { return; }
+            goalNameEl.innerText = data.currentGoalName || "Meta Completada";
+            const currentFormatted = formatter.format(data.currentTaps);
+            const goalFormatted = formatter.format(data.currentGoalTaps);
+            progressTextEl.innerText = `${currentFormatted} / ${goalFormatted}`;
+            nextGoalTextEl.innerText = data.nextGoalName || "";
+
+            let percent = data.percent || 0;
+            heartPercentEl.textContent = `${Math.floor(percent)}%`;
+
+            // --- ¡LÓGICA DE LLENADO CORRECTA! ---
+            const yPosition_abs = VIEWBOX_HEIGHT * (100 - percent) / 100;
+            const height_abs = VIEWBOX_HEIGHT * percent / 100;
+
+            heartFillEl.setAttribute('y', yPosition_abs);
+            heartFillEl.setAttribute('height', height_abs);
+
+            // Movemos el trazo superior junto con el llenado
+            heartStrokeEl.setAttribute('transform', `translate(0, ${yPosition_abs - 269.81})`);
+            // 269.81 es la coordenada Y inicial del trazo, calculamos el delta (Este es un ajuste fino)
+            // --- FIN DE LA LÓGICA ---
+
+            const fillColor = data.fillColor || '#FF00FF';
+            heartFillEl.setAttribute('fill', fillColor);
+            heartOutlineEl.setAttribute('stroke', fillColor); // El contorno usa el color de llenado
+
+            if (data.goalJustMet) {
+                triggerGoalAlert(data.currentGoalName);
+                if (percent < 100) {
+                    heartFillEl.style.transition = 'none';
+                    heartStrokeEl.style.transition = 'none';
+
+                    // Reseteo
+                    heartFillEl.setAttribute('y', VIEWBOX_HEIGHT);
+                    heartFillEl.setAttribute('height', 0);
+                    heartStrokeEl.setAttribute('transform', `translate(0, 0)`);
+
+                    setTimeout(() => {
+                        // CAMBIO AQUÍ: De 0.5s a 0.2s
+                        heartFillEl.style.transition = 'y 0.5s ease-out, height 0.5s ease-out';
+                        heartStrokeEl.style.transition = 'transform 0.5s ease-out';
+
+                        // Restauración
+                        heartFillEl.setAttribute('y', yPosition_abs);
+                        heartFillEl.setAttribute('height', height_abs);
+                        heartStrokeEl.setAttribute('transform', `translate(0, ${yPosition_abs - 269.81})`);
+                    }, 50);
+                }
+            }
+        }
+        function triggerGoalAlert(goalName) {
+            goalMetAlertEl.classList.remove('hidden');
+            goalMetAlertEl.classList.add('visible');
+            setTimeout(() => {
+                goalMetAlertEl.classList.remove('visible');
+                goalMetAlertEl.classList.add('hidden');
+            }, 4000);
+        }
+    </script>
+</body>
+</html>

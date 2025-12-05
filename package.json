@@ -1,0 +1,76 @@
+{
+  "name": "tiktok-battle-overlay-pro",
+  "version": "2.0.0",
+  "description": "Panel de control y overlays para batallas",
+  "main": "src/main/main.js",
+  "homepage": "./",
+  "author": "By Jinchu",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TU_USUARIO/TU_REPO.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "react-start": "react-scripts start",
+    "dev": "concurrently \"cross-env BROWSER=none npm run react-start\" \"wait-on http://localhost:3000 && electron .\"",
+    "build": "react-scripts build",
+    "package": "electron-builder build --win --publish always"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "cors": "^2.8.5",
+    "electron-store": "^8.1.0",
+    "electron-updater": "^6.6.2",
+    "express": "^4.18.2",
+    "fs-extra": "^11.2.0",
+    "node-fetch": "^3.3.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^28.2.0",
+    "electron-builder": "^24.9.1",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.jinchu.tiktokbattle",
+    "productName": "TikTok Battle Overlay",
+    "extends": null,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "TU_USUARIO",
+        "repo": "TU_REPO"
+      }
+    ],
+    "files": [
+      "build/**/*",
+      "src/main/**/*",
+      "src/shared/**/*",
+      "public/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "public/app_icon.ico"
+    }
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

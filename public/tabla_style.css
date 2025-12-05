@@ -1,0 +1,131 @@
+/* === TABLA DE POSICIONES (RANKING) === */
+
+@import url('https://fonts.googleapis.com/css2?family=Teko:wght@500;700&display=swap');
+
+body {
+    background-color: transparent;
+    font-family: 'Teko', sans-serif;
+    margin: 0;
+    padding: 10px;
+    overflow: hidden;
+}
+
+/* Contenedor Principal */
+#leaderboard-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 600px;
+}
+
+/* Fila de Equipo */
+.team-row {
+    position: relative;
+    width: 100%;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    border-radius: 8px; /* Bordes redondeados de la barra */
+    overflow: hidden;
+    transition: order 0.5s ease, transform 0.5s ease;
+}
+
+/* Fondo de la barra */
+.team-bar-bg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 1;
+}
+
+/* Barra de Progreso */
+.team-bar-fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    width: 0%;
+    background-color: #555;
+    z-index: 2;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.85;
+}
+
+/* Contenido */
+.team-content {
+    position: relative;
+    z-index: 3;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 10px; /* Un poco menos de padding para dar espacio a la foto */
+    color: white;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
+}
+
+/* --- ICONO CIRCULAR (FOTO DEL EQUIPO) --- */
+.team-icon {
+    width: 38px;  /* Un poco más grande para que luzca */
+    height: 38px;
+    object-fit: cover; /* Asegura que la foto llene el círculo sin deformarse */
+    border-radius: 50%; /* ¡Esto lo hace redondo! */
+    margin-right: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.8); /* Borde blanco elegante */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5); /* Sombrita */
+}
+
+/* Placeholder por si no hay foto */
+.team-icon-placeholder {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    margin-right: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* Nombre del Equipo */
+.team-name {
+    flex: 1;
+    font-size: 24px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 1px;
+}
+
+/* Puntaje */
+.team-score {
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffd700;
+    min-width: 60px;
+    text-align: right;
+}
+
+/* Total Global */
+#total-container {
+    margin-top: 15px;
+    width: 100%;
+    max-width: 600px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 5px 15px;
+    box-sizing: border-box;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+}
+
+.total-name { font-size: 20px; color: #aaa; }
+.total-score { font-size: 24px; font-weight: 700; color: white; }
+.hidden { display: none !important; }

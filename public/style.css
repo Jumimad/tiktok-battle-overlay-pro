@@ -1,0 +1,181 @@
+@import url('https://fonts.googleapis.com/css2?family=Teko:wght@600;700&display=swap');
+
+:root {
+    --pad-top: 55px;
+    --cont-width: 98%;
+    --bar-height: 45px;
+    --icon-size: 45px;
+    --gift-size: 30px;
+    --font-size: 26px;
+    --timer-font: 28px;
+    --timer-margin: 8px;
+}
+
+html, body {
+    background-color: transparent;
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    font-family: 'Teko', sans-serif;
+    color: white; text-transform: uppercase;
+    overflow: hidden; font-weight: 600;
+}
+
+#main-container {
+    width: var(--cont-width); height: 100%;
+    display: flex; flex-direction: column;
+    padding-top: var(--pad-top); padding-left: 8px; padding-right: 8px;
+    box-sizing: border-box; gap: 8px; margin: 0 auto;
+    position: relative;
+    padding-bottom: 60px;
+}
+
+#top-info-bar { display: none; }
+
+/* === BARRA PRINCIPAL === */
+#multi-goal-bar {
+    display: flex; flex-direction: row; align-items: center;
+    width: 100%; height: var(--bar-height);
+    overflow: visible; position: relative; z-index: 5;
+}
+
+/* === SEGMENTO === */
+.bar-segment {
+    height: 100%; position: relative;
+    transition: width 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* === FONDO VISUAL === */
+.visual-bg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0; background-color: inherit;
+    border-top: 1px solid rgba(255,255,255,0.4);
+    border-bottom: 1px solid rgba(0,0,0,0.3);
+
+    background-image: linear-gradient(-45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+    background-size: 40px 40px;
+    animation: moveStripes 1.5s linear infinite;
+    overflow: hidden;
+}
+@keyframes moveStripes { 0% { background-position: 0 0; } 100% { background-position: 40px 0; } }
+
+/* Redondeo */
+.bar-segment:first-child .visual-bg { border-radius: 50px 0 0 50px; border-left: 1px solid rgba(255,255,255,0.5); }
+.bar-segment:last-child .visual-bg { border-radius: 0 50px 50px 0; border-right: 1px solid rgba(255,255,255,0.5); }
+.bar-segment:not(:last-child) .visual-bg { border-right: 1px solid rgba(255,255,255,0.3); }
+
+
+/* === SURFING WRAPPER === */
+.surfing-wrapper {
+    position: absolute;
+    top: -50px;
+    z-index: 10;
+    pointer-events: none;
+    display: flex; flex-direction: column;
+    align-items: flex-start; /* Todo a la izquierda */
+    min-width: 250px;
+    transition: left 0.5s ease, right 0.5s ease;
+}
+
+/* --- LOGICA FIJO VS MOVIL --- */
+/* EQUIPO 1: FIJO A LA IZQUIERDA */
+.surf-left-team {
+    left: 0 !important;
+    right: auto !important;
+    margin-left: -5px;
+}
+
+/* EQUIPO 2: SURFEA (Móvil) */
+.surf-right-team {
+    left: -20px; /* Se pega al inicio de su segmento */
+}
+
+
+/* === FILA 1: ICONO + NOMBRE === */
+.info-top-row {
+    display: flex; align-items: center;
+    flex-direction: row;
+}
+
+.player-icon {
+    width: var(--icon-size); height: var(--icon-size);
+    border-radius: 50%; border: 2px solid white;
+    object-fit: cover; background: #222;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    z-index: 20; position: relative;
+}
+
+.player-name {
+    font-size: var(--font-size);
+    text-shadow: 2px 2px 0 #000, 0 0 5px rgba(0,0,0,0.8);
+    height: 32px; line-height: 34px;
+    white-space: nowrap; z-index: 10;
+
+    border-radius: 0 50px 50px 0;
+
+    margin-left: -15px;
+    padding: 0 25px 0 15px;
+
+    border-top: 1px solid rgba(255,255,255,0.3);
+    border-bottom: 1px solid rgba(0,0,0,0.2);
+}
+
+
+/* === FILA 2: REGALOS === */
+.info-bottom-row {
+    position: absolute;
+    top: 90px;
+    left: 0; /* Alineado a la izquierda */
+    height: 30px;
+    display: flex; align-items: center;
+}
+
+.gift-cluster {
+    display: flex; align-items: center; position: relative;
+    height: var(--gift-size); width: calc(var(--gift-size) * 2.5);
+}
+.gift-item img, .top-gift-icon {
+    width: var(--gift-size); height: var(--gift-size);
+    max-width: 30px; max-height: 30px;
+    object-fit: contain; filter: drop-shadow(1px 1px 2px black);
+}
+.gift-item { position: absolute; display: flex; align-items: center; justify-content: center; }
+.gift-item.sub { width: 20px; height: 20px; opacity: 0.9; z-index: 1; }
+.gift-cluster .gift-item:nth-child(1) { left: 0; }
+.gift-cluster .gift-item:nth-child(2) { left: 25px; z-index: 2; }
+.gift-item.main { width: 30px; height: 30px; right: 0; z-index: 3; animation: floatGift 2s infinite ease-in-out; }
+@keyframes floatGift { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+
+/* === SCORE (NUMEROS) === */
+.segment-score {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    z-index: 5;
+    font-size: var(--font-size); font-weight: 700; color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    pointer-events: none;
+    /* La posición left: 20px se fuerza en JS */
+}
+
+
+/* === EXTRAS === */
+#timer-display {
+    font-size: var(--timer-font); font-weight: 700; color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8); text-align: center;
+    background-color: rgba(0, 0, 0, 0.5); border-radius: 20px;
+    padding: 2px 15px; margin: var(--timer-margin) auto 0 auto;
+    width: fit-content; order: 2;
+}
+.hidden { display: none !important; }
+
+#winner-celebration {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 100; opacity: 0; transition: opacity 0.5s ease; pointer-events: none;
+}
+#winner-celebration.visible { opacity: 1; }
+#winner-box {
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 70%);
+    padding: 60px 100px; text-align: center;
+}
+#winner-title { font-size: 40px; color: #f0f0f0; }
+#winner-name { font-size: 90px; font-weight: 900; color: #ffd700; animation: winner-pulse 1s infinite alternate; }
+@keyframes winner-pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
