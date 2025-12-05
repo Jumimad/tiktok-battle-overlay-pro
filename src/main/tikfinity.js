@@ -14,13 +14,9 @@ class TikFinityClient {
         this.connectedUrl = '';
         this.isLicensed = false;
 
-        // Estado interno de conexión (Socket real)
-        this.socketOpen = false;
+        // Estado interno
+        this.connectionState = 'disconnected';
         this.isConnecting = false;
-
-        // --- MONITOR DE ACTIVIDAD ---
-        this.lastDataTime = 0; // Última vez que recibimos algo
-        this.ACTIVITY_TIMEOUT = 60000; // 1 Minuto en milisegundos
 
         this.saveTimeout = null;
 
@@ -34,6 +30,7 @@ class TikFinityClient {
         this.state.totalTaps = 0;
         this.state.stats = { totalDiamonds: 0, totalShares: 0 };
         this.userTracker = {};
+
         this.currentTapGoalIndex = 0;
         this.currentPointGoalIndex = 0;
         this.tapGoalJustMet = false;
@@ -41,57 +38,42 @@ class TikFinityClient {
 
         this.loadSession();
 
-        // --- HEARTBEAT INTELIGENTE ---
-        // Se ejecuta cada segundo para actualizar el estado en tiempo real
+        // HEARTBEAT
         setInterval(() => {
-            this.broadcastSmartStatus();
-        }, 1000);
+            this.broadcastStatusHeartbeat();
+        }, 2000);
     }
 
     logToFile(text) { try { fs.appendFileSync(this.logPath, text + '\n'); } catch (e) { } }
 
-    // --- CEREBRO DEL ESTADO ---
-    broadcastSmartStatus() {
-        let smartStatus = 'disconnected';
-
-        if (this.socketOpen) {
-            const now = Date.now();
-            // Si hubo datos hace menos de 1 minuto -> ACTIVE (Verde)
-            if (now - this.lastDataTime < this.ACTIVITY_TIMEOUT) {
-                smartStatus = 'active';
-            }
-            // Si estamos conectados pero nadie escribe -> WAITING (Amarillo)
-            else {
-                smartStatus = 'waiting';
-            }
-        } else if (this.isConnecting) {
-            smartStatus = 'connecting';
-        }
-
-        this.broadcast({
-            type: 'APP_STATUS',
-            data: { status: smartStatus }
-        });
-    }
-
+    // --- NUEVO: OBTENER FOTO COMPLETA DEL ESTADO ---
     getFullState() {
-        // Ejecutamos la lógica para devolver el estado actual exacto
-        let smartStatus = 'disconnected';
-        if (this.socketOpen) {
-            const now = Date.now();
-            smartStatus = (now - this.lastDataTime < this.ACTIVITY_TIMEOUT) ? 'active' : 'waiting';
-        } else if (this.isConnecting) {
-            smartStatus = 'connecting';
-        }
+        let currentStatus = this.connectionState;
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) currentStatus = 'connected';
+        else if (this.isConnecting) currentStatus = 'connecting';
 
         return {
-            status: smartStatus,
+            status: currentStatus,
             stats: {
                 taps: this.state.totalTaps,
                 diamonds: this.state.stats.totalDiamonds,
                 shares: this.state.stats.totalShares
             }
         };
+    }
+
+    broadcastStatusHeartbeat() {
+        const fullState = this.getFullState();
+        this.connectionState = fullState.status;
+        this.broadcast({
+            type: 'APP_STATUS',
+            data: { status: fullState.status }
+        });
+    }
+
+    sendStatus(status) {
+        this.connectionState = status;
+        this.broadcast({ type: 'APP_STATUS', data: { status: status } });
     }
 
     setLicenseStatus(isValid) {
@@ -119,27 +101,26 @@ class TikFinityClient {
 
     connect() {
         if (!this.isLicensed) return;
-        if (this.socketOpen) return; // Ya estamos conectados
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
         if (this.isConnecting) return;
 
         const url = this.connectedUrl || "ws://127.0.0.1:21213/";
 
         this.isConnecting = true;
-        this.broadcastSmartStatus();
+        this.sendStatus('connecting');
 
         try {
             this.ws = new WebSocket(url);
         } catch (e) {
             this.isConnecting = false;
-            this.socketOpen = false;
+            this.sendStatus('disconnected');
             return;
         }
 
         this.ws.on('open', () => {
             this.isConnecting = false;
-            this.socketOpen = true; // Marcamos conexión real
             this.logger('[CEREBRO] Conectado a TikFinity.');
-            this.broadcastSmartStatus();
+            this.sendStatus('connected');
             this.emitAllStats();
         });
 
@@ -153,25 +134,20 @@ class TikFinityClient {
 
         this.ws.on('close', () => {
             this.isConnecting = false;
-            this.socketOpen = false;
-            this.broadcastSmartStatus();
+            this.sendStatus('disconnected');
             this.ws = null;
             if (this.isLicensed) setTimeout(() => { this.connect(); }, this.reconnectInterval);
         });
 
         this.ws.on('error', () => {
             this.isConnecting = false;
-            this.socketOpen = false;
+            this.sendStatus('disconnected');
         });
     }
 
     processMessage(msg) {
         if (!this.isLicensed || !msg) return;
-
-        // --- REGISTRAR ACTIVIDAD ---
-        // Cada vez que entra un mensaje válido, actualizamos el reloj
-        this.lastDataTime = Date.now();
-        // ---------------------------
+        if (this.connectionState !== 'connected') this.sendStatus('connected');
 
         logEvent(msg.event || 'unknown', msg);
 
@@ -222,7 +198,9 @@ class TikFinityClient {
                 this.checkPointGoal();
                 this.emitModule1();
 
+                // Buscamos a qué equipo pertenece este regalo
                 const teamId = this.findTeamIdByGift(giftName);
+
                 if (teamId) {
                     if (!this.state.streamScores[teamId]) this.state.streamScores[teamId] = 0;
                     this.state.streamScores[teamId] += points;
@@ -291,12 +269,30 @@ class TikFinityClient {
         let percent = 0; if (range > 0) percent = (progress / range) * 100;
         return { currentPoints: total, currentGoalPoints: parseInt(cur.points), currentGoalName: cur.name, nextGoalName: `Siguiente: ${goals[this.currentPointGoalIndex+1]?.name || "Final"}`, percent: Math.min(Math.max(percent, 0), 100), fillColor: color, goalJustMet: this.pointGoalJustMet };
     }
+
+    // --- CORRECCIÓN AQUÍ: BUSCAR EN LOS 3 TIPOS DE REGALOS ---
     findTeamIdByGift(giftName) {
         if(!giftName) return null;
+        const incoming = giftName.toLowerCase().trim();
         const teams = this.state.config.teams || [];
-        const team = teams.find(t => t.giftName && t.giftName.toLowerCase().trim() === giftName);
+
+        // Buscamos el equipo que tenga este regalo en cualquiera de sus 3 casillas
+        const team = teams.find(t => {
+            // Check Regalo "Legacy" (El que se guarda por defecto)
+            if (t.giftName && t.giftName.toLowerCase().trim() === incoming) return true;
+            // Check Regalo Bajo
+            if (t.giftName_low && t.giftName_low.toLowerCase().trim() === incoming) return true;
+            // Check Regalo Medio
+            if (t.giftName_mid && t.giftName_mid.toLowerCase().trim() === incoming) return true;
+            // Check Regalo Alto
+            if (t.giftName_high && t.giftName_high.toLowerCase().trim() === incoming) return true;
+
+            return false;
+        });
+
         return team ? team.id : null;
     }
+
     saveSession() { if (this.saveTimeout) clearTimeout(this.saveTimeout); this.saveTimeout = setTimeout(() => { this._writeSessionToDisk(); }, 3000); }
     _writeSessionToDisk() { if(this.sessionFile) { try{ fs.writeFileSync(this.sessionFile, JSON.stringify({ stats: this.state.stats, totalTaps: this.state.totalTaps })); }catch(e){} } if(this.usersDbFile) { try { fs.writeFileSync(this.usersDbFile, JSON.stringify(this.userTracker)); } catch(e){} } }
     loadSession() { if(this.sessionFile && fs.existsSync(this.sessionFile)){ try{ const d = JSON.parse(fs.readFileSync(this.sessionFile)); if(d.stats) this.state.stats = d.stats; if(d.totalTaps) this.state.totalTaps = d.totalTaps; }catch(e){} } if(this.usersDbFile && fs.existsSync(this.usersDbFile)) { try { this.userTracker = JSON.parse(fs.readFileSync(this.usersDbFile)); } catch(e) { this.userTracker = {}; } } this.recalculateTapProgress(); }
