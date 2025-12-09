@@ -8,6 +8,10 @@ const url = require('url');
 // --- UPDATE LOGIC: IMPORTAR LA LIBRERÍA ---
 const { autoUpdater } = require('electron-updater');
 
+autoUpdater.allowPrerelease = true; // Permite versiones no finales (útil)
+autoUpdater.allowDowngrade = false;
+process.env.ELECTRON_IS_DEV = 0;
+
 // Configuración del actualizador
 autoUpdater.autoDownload = false; // No descargar solo, esperar a que el usuario diga "Sí"
 autoUpdater.logger = console; // Para ver errores en la consola

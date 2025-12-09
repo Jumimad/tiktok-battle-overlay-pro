@@ -20,9 +20,11 @@ function App() {
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
     const [toasts, setToasts] = useState([]);
     const [showSessionModal, setShowSessionModal] = useState(false);
+
+    // --- ESTADO PARA LA VERSIÓN ---
     const [appVersion, setAppVersion] = useState('Loading...');
 
-    // --- NUEVO: ESTADO PARA ACTUALIZACIONES ---
+    // --- ESTADO PARA ACTUALIZACIONES ---
     const [updateInfo, setUpdateInfo] = useState(null);
 
     // Estado global de datos (Sync entre pestañas)
@@ -61,11 +63,12 @@ function App() {
             }
         };
 
+        // 2. VERSIÓN DE LA APP
         const onAppVersion = (e, version) => {
-            setAppVersion(version); // Guardamos la versión que nos dio el backend
+            setAppVersion(version);
         };
 
-        // 2. ESTADO COMPLETO (Al iniciar)
+        // 3. ESTADO COMPLETO (Al iniciar)
         const onFullState = (e, fullState) => {
             if (fullState) {
                 setConnectionStatus(fullState.status);
@@ -73,15 +76,12 @@ function App() {
             }
         };
 
-        // 3. ACTUALIZACIÓN EN TIEMPO REAL
+        // 4. ACTUALIZACIÓN EN TIEMPO REAL
         const onStatsUpdate = (e, msg) => {
-            // Mensaje de ESTADO
             if (msg.type === 'APP_STATUS') {
                 setConnectionStatus(msg.data.status);
                 return;
             }
-
-            // Mensaje de DATOS
             const payload = msg.data || msg;
             if (msg.type === 'STATS_UPDATE' || msg.type === 'TAPS_UPDATE' || msg.type === 'TOTAL_POINTS_UPDATE') {
                 setGlobalStats(prev => ({
@@ -89,22 +89,33 @@ function App() {
                     diamonds: payload.diamonds !== undefined ? payload.diamonds : prev.diamonds,
                     shares: payload.shares !== undefined ? payload.shares : prev.shares
                 }));
-                // Auto-corrección visual a VERDE si entran datos
                 setConnectionStatus('active');
             }
         };
 
         const onConfigUpdated = () => { addToast('Configuración Guardada', 'success'); };
 
-        // --- 4. NUEVO: LISTENERS DE ACTUALIZACIÓN ---
+        // --- 5. LOGICA DE ACTUALIZACIÓN ---
         const onUpdateAvailable = (event, version) => {
-            setUpdateInfo(version); // Guardamos la versión para mostrar el modal
+            setUpdateInfo(version); // Mostrar modal azul
+        };
+
+        // NUEVO: Escuchar progreso de descarga
+        const onDownloadProgress = (event, progressObj) => {
+            // Solo mostramos toast cada 20% para no saturar
+            const p = Math.floor(progressObj.percent);
+            if(p % 20 === 0 && p > 0) {
+                console.log(`Descargando update: ${p}%`);
+            }
         };
 
         const onUpdateDownloaded = () => {
-            // Cuando termina de bajar, preguntamos si reiniciar
-            if(window.confirm("¡Actualización descargada! ¿Reiniciar ahora para instalar?")) {
+            // Forzar pregunta de instalación
+            const resp = window.confirm("¡Actualización descargada exitosamente! 🚀\n\n¿Quieres reiniciar el programa ahora para instalarla?");
+            if (resp) {
                 ipcRenderer.send('install-update');
+            } else {
+                addToast("La actualización se instalará la próxima vez que abras la app.", 'info');
             }
         };
 
@@ -117,6 +128,7 @@ function App() {
 
         // Listeners del Update
         ipcRenderer.on('update_available', onUpdateAvailable);
+        ipcRenderer.on('download-progress', onDownloadProgress); // <--- NUEVO
         ipcRenderer.on('update_downloaded', onUpdateDownloaded);
 
         // LLAMADAS INICIALES
@@ -125,22 +137,23 @@ function App() {
 
         return () => {
             ipcRenderer.removeAllListeners('license-status');
+            ipcRenderer.removeAllListeners('app-version');
             ipcRenderer.removeAllListeners('full-state-data');
             ipcRenderer.removeAllListeners('stats-update');
             ipcRenderer.removeAllListeners('config:updated');
             ipcRenderer.removeAllListeners('update_available');
+            ipcRenderer.removeAllListeners('download-progress');
             ipcRenderer.removeAllListeners('update_downloaded');
-            ipcRenderer.removeAllListeners('app-version')
         };
     }, []);
 
-    // --- RENDER DEL BOTÓN INTELIGENTE ---
+    // --- RENDER UI ---
     const getStatusUI = () => {
         switch(connectionStatus) {
-            case 'active': return { label: 'ONLINE', color: 'status-connected' }; // Verde
-            case 'waiting': return { label: 'EN ESPERA (SIN DATOS)', color: 'status-connecting' }; // Naranja
-            case 'connecting': return { label: 'CONECTANDO...', color: 'status-connecting' }; // Naranja parpadeando
-            case 'disconnected': return { label: 'OFFLINE OPEN TIKFINITY', color: 'status-disconnected' }; // Rojo
+            case 'active': return { label: 'ONLINE', color: 'status-connected' };
+            case 'waiting': return { label: 'EN ESPERA (SIN DATOS)', color: 'status-connecting' };
+            case 'connecting': return { label: 'CONECTANDO...', color: 'status-connecting' };
+            case 'disconnected': return { label: 'OFFLINE OPEN TIKFINITY', color: 'status-disconnected' };
             default: return { label: 'OFFLINE', color: 'status-disconnected' };
         }
     };
@@ -155,7 +168,7 @@ function App() {
             <div className="ambient-orb orb-1"></div>
             <div className="ambient-orb orb-2"></div>
 
-            {/* --- NUEVO: MODAL DE ACTUALIZACIÓN --- */}
+            {/* MODAL DE ACTUALIZACIÓN */}
             {updateInfo && (
                 <div className="license-overlay" style={{zIndex: 100000}}>
                     <div className="license-box" style={{border: '2px solid #00CCFF'}}>
@@ -168,7 +181,7 @@ function App() {
                             <button className="btn btn-primary" style={{flex:1, padding: 15}} onClick={() => {
                                 ipcRenderer.send('start-download');
                                 setUpdateInfo(null); // Ocultar mientras baja
-                                addToast('Descargando en segundo plano...', 'info');
+                                addToast('Descargando en segundo plano... Por favor espera.', 'info');
                             }}>
                                 📥 Descargar e Instalar
                             </button>
