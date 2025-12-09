@@ -2,10 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Overlay Batalla Final Fija</title>
+    <title>Overlay Batalla Full Screen</title>
     <link id="main-stylesheet" rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<div id="fullscreen-layer"></div>
 
 <div id="main-container">
     <div id="top-info-bar"></div>
@@ -22,6 +24,9 @@
 
 <script src="common.js"></script>
 <script>
+    // --- NOTA: No declaramos 'let currentSettings' aquí porque common.js ya lo hace ---
+
+    // --- AJUSTES VISUALES DESDE CONFIG ---
     function applyLayout(layout) {
         if (!layout) return;
         const r = document.querySelector(':root');
@@ -35,45 +40,60 @@
         if(layout.timer_font_size !== undefined) r.style.setProperty('--timer-font', `${layout.timer_font_size}px`);
     }
 
+    // --- HELPER PARA RUTAS DE IMAGEN ---
     function fixPath(path) {
         if (!path) return '';
         if (path.startsWith('http')) return path;
         return `/local-image?path=${encodeURIComponent(path)}`;
     }
 
+    // --- RENDERIZADO PRINCIPAL (CONFIGURACIÓN) ---
     function handleConfig(config) {
+        // Asignamos a la variable global que viene de common.js
         if(typeof currentSettings !== 'undefined') currentSettings = config;
+
         applyLayout(config.layout);
         const l = config.layout || {};
 
         const multiGoalBar = document.getElementById('multi-goal-bar');
+        const topInfoBar = document.getElementById('top-info-bar');
+        const fullscreenLayer = document.getElementById('fullscreen-layer');
+
         multiGoalBar.innerHTML = '';
+        if(topInfoBar) topInfoBar.innerHTML = '';
+        fullscreenLayer.innerHTML = '';
 
         if (!config.teams) return;
         const activeTeams = config.teams.filter(t => t.active !== false);
 
         activeTeams.forEach((team, index) => {
-            // 1. SEGMENTO BASE
+            // 1. CREAR COLUMNA DE FONDO GIGANTE
+            const bgCol = document.createElement('div');
+            bgCol.className = 'fs-column';
+            bgCol.id = `fs-bg-${team.id}`; // ID vital para el hielo
+            fullscreenLayer.appendChild(bgCol);
+
+            // 2. SEGMENTO DE BARRA
             const segment = document.createElement('div');
             segment.className = 'bar-segment';
             segment.id = `segment-${team.id}`;
             segment.style.width = (100 / activeTeams.length) + '%';
 
-            // 2. FONDO DE COLOR
+            // Fondo visual de la barra (donde también va el hielo pequeño)
             const visualBg = document.createElement('div');
             visualBg.className = 'visual-bg';
+            visualBg.id = `visual-bg-${team.id}`; // ID vital para el hielo
             visualBg.style.backgroundColor = team.color;
             segment.appendChild(visualBg);
 
-            // 3. SURFING WRAPPER (Headers)
+            // 3. ESTRUCTURA DE INFORMACIÓN (Surfing Wrapper)
             const surfWrapper = document.createElement('div');
             surfWrapper.className = 'surfing-wrapper';
-
-            // Lógica: Eq 1 Fijo a la Izquierda, Eq 2 Surfea
+            // Lógica de posición (Izquierda o Derecha)
             if (index === 0) surfWrapper.classList.add('surf-left-team');
             else surfWrapper.classList.add('surf-right-team');
 
-            // --- HEADER: ICONO + NOMBRE ---
+            // --- FILA SUPERIOR: FOTO Y NOMBRE ---
             const topRow = document.createElement('div');
             topRow.className = 'info-top-row';
 
@@ -82,17 +102,12 @@
                 ? `<img src="${iconSrc}" class="player-icon" onerror="this.style.display='none'">`
                 : '';
 
-            // Degradado para el nombre
-            let bgGradient = (index === 0)
-                ? `linear-gradient(90deg, ${team.color} 50%, transparent 100%)`
-                : `linear-gradient(90deg, ${team.color} 50%, transparent 100%)`;
-
+            let bgGradient = `linear-gradient(90deg, ${team.color} 50%, transparent 100%)`;
             const htmlName = `<span class="player-name" style="background: ${bgGradient}; color: white;">${team.name}</span>`;
 
             topRow.innerHTML = htmlProfile + htmlName;
 
-
-            // --- REGALOS ---
+            // --- FILA INFERIOR: REGALOS (CLUSTERS) ---
             const bottomRow = document.createElement('div');
             bottomRow.className = 'info-bottom-row';
 
@@ -119,14 +134,11 @@
             surfWrapper.appendChild(bottomRow);
             segment.appendChild(surfWrapper);
 
-
-            // 4. SCORE (PUNTAJE) - CAMBIO AQUI
+            // 4. PUNTAJE NUMÉRICO
             const segmentScore = document.createElement('span');
             segmentScore.className = 'segment-score';
             segmentScore.id = `bar-score-${team.id}`;
             segmentScore.innerText = '0';
-
-            // SIEMPRE A LA IZQUIERDA (Para todos los equipos)
             segmentScore.style.left = '20px';
             segmentScore.style.right = 'auto';
             segmentScore.style.textAlign = 'left';
@@ -135,20 +147,68 @@
             multiGoalBar.appendChild(segment);
         });
 
+        // Aseguramos que currentScores exista antes de llamar
         if(typeof currentScores !== 'undefined') handleScores(currentScores, true);
     }
 
+    // --- MANEJO DE PUNTUACIONES Y EFECTOS ---
     function handleScores(scores, isInitialLoad) {
-        const teams = currentSettings.teams ? currentSettings.teams.filter(t => t.active!==false) : [];
+        // Actualizamos variable global si existe
+        if(typeof currentScores !== 'undefined') currentScores = scores;
+
+        // Verificamos settings
+        const settings = (typeof currentSettings !== 'undefined') ? currentSettings : {};
+        const teams = settings.teams ? settings.teams.filter(t => t.active!==false) : [];
+
         if (teams.length === 0) return;
+
         let total = 0;
         teams.forEach(t => total += (scores[t.id] || 0));
+
+        // =========================================================
+        // LÓGICA DE HIELO (PANTALLA + BARRITA)
+        // =========================================================
+        if (teams.length === 2 && settings.ice_effect) {
+            const t1 = teams[0];
+            const t2 = teams[1];
+            const s1 = scores[t1.id] || 0;
+            const s2 = scores[t2.id] || 0;
+
+            // 1. Elementos de Pantalla Completa
+            const fs1 = document.getElementById(`fs-bg-${t1.id}`);
+            const fs2 = document.getElementById(`fs-bg-${t2.id}`);
+
+            // 2. Elementos de la Barrita
+            const bar1 = document.getElementById(`visual-bg-${t1.id}`);
+            const bar2 = document.getElementById(`visual-bg-${t2.id}`);
+
+            // A. LIMPIEZA
+            if(fs1) fs1.classList.remove('frozen');
+            if(fs2) fs2.classList.remove('frozen');
+            if(bar1) bar1.classList.remove('frozen');
+            if(bar2) bar2.classList.remove('frozen');
+
+            // B. APLICACIÓN
+            if (total > 0 && s1 !== s2) {
+                if (s1 > s2) {
+                    if(fs2) fs2.classList.add('frozen');
+                    if(bar2) bar2.classList.add('frozen');
+                } else {
+                    if(fs1) fs1.classList.add('frozen');
+                    if(bar1) bar1.classList.add('frozen');
+                }
+            }
+        }
+        // =========================================================
+
         const basePercent = 15.0;
         const remaining = 100 - (basePercent * teams.length);
+
         teams.forEach(team => {
             const s = scores[team.id] || 0;
             const txt = document.getElementById(`bar-score-${team.id}`);
             const seg = document.getElementById(`segment-${team.id}`);
+
             if(txt) {
                 const start = parseInt(txt.innerText)||0;
                 if(start!==s && typeof animateValue==='function') animateValue(txt, start, s, 500);
@@ -163,6 +223,7 @@
         });
     }
 
+    // --- TEMPORIZADOR ---
     function handleTimer(s, r, p) {
         const el = document.getElementById('timer-display');
         if(s<=0 || isNaN(s)) { el.classList.add('hidden'); return; }
@@ -172,6 +233,7 @@
         el.innerText = `${m}:${sec}`;
     }
 
+    // --- GANADOR ---
     function handleWinner(w) {
         const el = document.getElementById('winner-celebration');
         if(w) {
@@ -180,8 +242,12 @@
             el.classList.remove('hidden');
             el.classList.add('visible');
             setTimeout(() => { el.classList.remove('visible'); el.classList.add('hidden'); }, 5000);
-        } else { el.classList.remove('visible'); el.classList.add('hidden'); }
+        } else {
+            el.classList.remove('visible');
+            el.classList.add('hidden');
+        }
     }
+
     window.handleConfig = handleConfig;
     window.handleScores = handleScores;
     window.handleTimer = handleTimer;

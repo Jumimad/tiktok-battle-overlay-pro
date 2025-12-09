@@ -21,7 +21,10 @@ const BattleTab = ({ onShowToast, globalStats }) => {
     const [gifts, setGifts] = useState([]);
 
     // ESTADO: CANTIDAD DE EQUIPOS VISIBLES
-    const [teamCount, setTeamCount] = useState(2); // Valor inicial seguro
+    const [teamCount, setTeamCount] = useState(2);
+
+    // --- NUEVO: ESTADO PARA EL EFECTO HIELO ---
+    const [iceEffect, setIceEffect] = useState(false);
 
     const ipcRenderer = getIpc();
 
@@ -38,12 +41,15 @@ const BattleTab = ({ onShowToast, globalStats }) => {
             if (config?.allow_gifts_off_timer !== undefined) {
                 setAllowGiftsOffTimer(config.allow_gifts_off_timer);
             }
+            // Cargar estado del hielo
+            if (config?.ice_effect !== undefined) {
+                setIceEffect(config.ice_effect);
+            }
 
             // Detectar cuántos equipos hay activos para ajustar el selector al cargar
             if (config?.teams) {
                 const activeCount = config.teams.filter(t => t.active).length;
                 // AJUSTE: Permitimos que el mínimo sea 1 equipo (para modo Solo)
-                // Si activeCount es 0 (primera vez), ponemos 2 por defecto.
                 setTeamCount(activeCount < 1 ? 2 : (activeCount > MAX_TEAMS ? MAX_TEAMS : activeCount));
             }
         };
@@ -67,9 +73,22 @@ const BattleTab = ({ onShowToast, globalStats }) => {
         };
     }, []);
 
+    // --- NUEVO: MANEJADOR DEL EFECTO HIELO ---
+    const handleIceEffectChange = (checked) => {
+        setIceEffect(checked);
+        setFullConfig(prev => {
+            const newConfig = { ...prev, ice_effect: checked };
+            ipcRenderer.send(CHANNELS.CONFIG.SAVE, newConfig);
+            return newConfig;
+        });
+    };
+
     // --- MANEJADOR DE CANTIDAD DE EQUIPOS ---
     const handleTeamCountChange = (count) => {
         setTeamCount(count);
+
+        // Si cambiamos a algo que no sea 2, apagamos el hielo por seguridad visual
+        if (count !== 2 && iceEffect) handleIceEffectChange(false);
 
         setFullConfig(prevConfig => {
             const updatedTeams = [...(prevConfig.teams || [])];
@@ -222,23 +241,36 @@ const BattleTab = ({ onShowToast, globalStats }) => {
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, flexWrap: 'wrap', gap: 10}}>
                     <span className="group-title" style={{margin:0}}>Escuadrón de Batalla</span>
 
-                    {/* SELECTOR DE CANTIDAD DE EQUIPOS (1 al 10) */}
-                    <div style={{display:'flex', gap: 5, alignItems:'center', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '8px', flexWrap: 'wrap'}}>
-                        <span style={{fontSize: 12, color: '#aaa', paddingLeft: 5, paddingRight: 5}}>Equipos:</span>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                            <button
-                                key={num}
-                                onClick={() => handleTeamCountChange(num)}
-                                style={{
-                                    background: teamCount === num ? 'var(--neon-blue)' : 'transparent',
-                                    color: teamCount === num ? 'white' : '#aaa',
-                                    border: 'none', borderRadius: '6px', padding: '4px 8px',
-                                    cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s', fontSize: '12px'
-                                }}
-                            >
-                                {num}
-                            </button>
-                        ))}
+                    <div style={{display:'flex', alignItems:'center', gap: 15}}>
+
+                        {/* --- BOTÓN EFECTO HIELO (NUEVO) --- */}
+                        {teamCount === 2 && (
+                            <div style={{display:'flex', alignItems:'center', background: iceEffect ? '#00CCFF' : 'rgba(255,255,255,0.1)', padding:'5px 10px', borderRadius:8, transition:'0.3s'}}>
+                                <span style={{fontSize:12, marginRight:8, fontWeight:'bold', color: iceEffect ? '#000' : '#aaa'}}>❄️ Efecto Hielo</span>
+                                <label className="toggle-switch" style={{transform:'scale(0.8)'}}>
+                                    <input type="checkbox" checked={iceEffect} onChange={e=>handleIceEffectChange(e.target.checked)} />
+                                    <div className="slider"></div>
+                                </label>
+                            </div>
+                        )}
+
+                        <div style={{display:'flex', gap: 5, alignItems:'center', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '8px', flexWrap: 'wrap'}}>
+                            <span style={{fontSize: 12, color: '#aaa', paddingLeft: 5, paddingRight: 5}}>Equipos:</span>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                                <button
+                                    key={num}
+                                    onClick={() => handleTeamCountChange(num)}
+                                    style={{
+                                        background: teamCount === num ? 'var(--neon-blue)' : 'transparent',
+                                        color: teamCount === num ? 'white' : '#aaa',
+                                        border: 'none', borderRadius: '6px', padding: '4px 8px',
+                                        cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s', fontSize: '12px'
+                                    }}
+                                >
+                                    {num}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 

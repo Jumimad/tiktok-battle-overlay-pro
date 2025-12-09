@@ -26,6 +26,7 @@ html, body {
     box-sizing: border-box; gap: 8px; margin: 0 auto;
     position: relative;
     padding-bottom: 60px;
+    z-index: 10; /* La barra va ENCIMA del hielo */
 }
 
 #top-info-bar { display: none; }
@@ -179,3 +180,94 @@ html, body {
 #winner-title { font-size: 40px; color: #f0f0f0; }
 #winner-name { font-size: 90px; font-weight: 900; color: #ffd700; animation: winner-pulse 1s infinite alternate; }
 @keyframes winner-pulse { from { transform: scale(1); } to { transform: scale(1.05); } }
+
+
+.frozen {
+    position: relative;
+}
+
+.frozen::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    /* Ruta relativa dentro de la app compilada o local */
+    background-image: url('assets/img/watter.jpg');
+    background-size: cover;
+    background-position: center;
+    opacity: 0.9; /* Hielo semi-transparente */
+    mix-blend-mode: hard-light; /* Mezcla el hielo con el color del equipo */
+    filter: brightness(1.2) contrast(1.2) hue-rotate(180deg); /* Ajuste para que se vea más frío */
+    z-index: 10;
+    border-radius: inherit; /* Hereda bordes redondeados del segmento */
+    pointer-events: none;
+    animation: freezeIn 0.8s ease-out forwards;
+}
+
+@keyframes freezeIn {
+    0% { opacity: 0; transform: scaleX(0); }
+    100% { opacity: 0.9; transform: scaleX(1); }
+}
+
+
+
+/* === NUEVA CAPA DE FONDO (SPLIT SCREEN) === */
+#fullscreen-layer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex; /* Divide la pantalla en columnas */
+    z-index: 0; /* Detrás de todo */
+    pointer-events: none; /* Permite clicks a través */
+}
+
+.fs-column {
+    height: 100%;
+    flex: 1; /* Ocupa espacio igual (50% si son 2) */
+    position: relative;
+    transition: all 0.5s ease;
+    /* Por defecto transparente para ver la cámara */
+    background: transparent;
+    /* Borde sutil para separar pantallas (Opcional) */
+    border-right: 1px solid rgba(255,255,255,0.1);
+}
+.fs-column:last-child { border-right: none; }
+
+/* === EFECTO HIELO GIGANTE (MODIFICADO) === */
+.frozen {
+    position: relative;
+}
+
+/* El hielo ahora se aplica a la columna gigante */
+.frozen::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+
+    /* TU IMAGEN DE HIELO */
+    background-image: url('assets/img/watter.jpg');
+    background-size: cover;
+    background-position: center;
+
+    /* Efectos visuales de congelamiento */
+    opacity: 0.65; /* Transparencia para ver a la persona detrás congelada */
+    mix-blend-mode: hard-light; /* Fusión agresiva con el video */
+    filter: brightness(1.1) contrast(1.2) hue-rotate(190deg) saturate(0.8); /* Tono azulado frío */
+
+    z-index: 5;
+    animation: freezeScreen 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+/* Bordes de hielo en los costados (Vignette) */
+.frozen::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    box-shadow: inset 0 0 100px rgba(180, 240, 255, 0.8);
+    z-index: 6;
+}
+
+@keyframes freezeScreen {
+    0% { opacity: 0; transform: scale(1.1); filter: blur(10px); }
+    100% { opacity: 0.65; transform: scale(1); filter: blur(0px); }
+}
