@@ -1,6 +1,6 @@
 {
   "name": "tiktok-battle-overlay-pro",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Panel de control y overlays para batallas",
   "main": "src/main/main.js",
   "homepage": "./",
