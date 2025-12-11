@@ -125,25 +125,61 @@ html, body {
     position: absolute;
     top: 90px;
     left: 0; /* Alineado a la izquierda */
-    height: 30px;
+    height: var(--gift-size);
     display: flex; align-items: center;
 }
 
 .gift-cluster {
     display: flex; align-items: center; position: relative;
-    height: var(--gift-size); width: calc(var(--gift-size) * 2.5);
+    height: var(--gift-size);
+    /* El ancho ahora se calcula dinámicamente según el tamaño del regalo */
+    width: calc(var(--gift-size) * 2.2);
 }
+
 .gift-item img, .top-gift-icon {
-    width: var(--gift-size); height: var(--gift-size);
-    max-width: 30px; max-height: 30px;
-    object-fit: contain; filter: drop-shadow(1px 1px 2px black);
+    /* AQUÍ ESTABA EL ERROR: Eliminados los max-width de 30px */
+    width: var(--gift-size);
+    height: var(--gift-size);
+    object-fit: contain;
+    filter: drop-shadow(1px 1px 2px black);
 }
-.gift-item { position: absolute; display: flex; align-items: center; justify-content: center; }
-.gift-item.sub { width: 20px; height: 20px; opacity: 0.9; z-index: 1; }
-.gift-cluster .gift-item:nth-child(1) { left: 0; }
-.gift-cluster .gift-item:nth-child(2) { left: 25px; z-index: 2; }
-.gift-item.main { width: 30px; height: 30px; right: 0; z-index: 3; animation: floatGift 2s infinite ease-in-out; }
-@keyframes floatGift { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+.gift-item {
+    position: absolute;
+    display: flex; align-items: center; justify-content: center;
+}
+
+/* Regalos secundarios (Bajo y Medio) un poco más pequeños proporcionalmente */
+.gift-item.sub {
+    width: calc(var(--gift-size) * 0.8);
+    height: calc(var(--gift-size) * 0.8);
+    opacity: 0.9;
+    z-index: 1;
+}
+
+/* Posiciones dinámicas (Esto arregla el "traslado") */
+.gift-cluster .gift-item:nth-child(1) {
+    left: 0;
+}
+
+.gift-cluster .gift-item:nth-child(2) {
+    /* Se mueve proporcionalmente al tamaño */
+    left: calc(var(--gift-size) * 0.6);
+    z-index: 2;
+}
+
+.gift-item.main {
+    width: var(--gift-size);
+    height: var(--gift-size);
+    right: 0;
+    z-index: 3;
+    animation: floatGift 2s infinite ease-in-out;
+}
+
+@keyframes floatGift {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10%); } /* Porcentaje para adaptarse al tamaño */
+}
 
 
 /* === SCORE (NUMEROS) === */
