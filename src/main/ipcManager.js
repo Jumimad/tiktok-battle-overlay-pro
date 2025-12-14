@@ -70,29 +70,61 @@ function setupIPC(mainWindow, server, tikClient, battleService, giftService) {
     const validateToken = (token, force = false) => {
         return new Promise((resolve) => {
             const now = Date.now();
-            if (!token) { resolve({ valid: false }); return; }
+
+            // Validación básica local
+            if (!token) { resolve({ valid: false, reason: "Token vacío" }); return; }
             const tokenLimpio = token.trim();
+
+            // Chequeo de Caché (Optimización para no saturar el servidor)
             if (!force && licenseCache.token === tokenLimpio && licenseCache.isValid && (now - licenseCache.lastCheck < CACHE_DURATION)) {
+                console.log("Licencia validada desde caché");
                 resolve({ valid: true }); return;
             }
+
             const deviceId = getDeviceId();
-            const BASE_URL = "https://niicolenco.tv/validar_token.php";
+
+            // --- CAMBIO 1: La URL ahora apunta a la carpeta /api/ ---
+            // Asegúrate de usar tu dominio real (battleinteractive.live o niicolenco.tv)
+            const BASE_URL = "https://battleinteractive.live/api/validar_token.php";
+
             const urlCompleta = `${BASE_URL}?token=${encodeURIComponent(tokenLimpio)}&device_id=${encodeURIComponent(deviceId)}&nocache=${now}`;
+
             const request = net.request({ method: 'GET', url: urlCompleta });
-            request.setHeader('User-Agent', 'TikBattle/2.0');
+            request.setHeader('User-Agent', 'BattleInteractive/2.0.6'); // Actualicé el User-Agent
+
             request.on('response', (response) => {
                 let data = '';
                 response.on('data', (chunk) => data += chunk.toString());
+
                 response.on('end', () => {
                     try {
                         const json = JSON.parse(data.trim());
-                        const isValid = (json && json.valid === true);
-                        licenseCache = { token: tokenLimpio, isValid: isValid, lastCheck: Date.now() };
-                        resolve({ valid: isValid, reason: isValid ? null : json.message });
-                    } catch (e) { resolve({ valid: false, reason: "Error de comunicación" }); }
+
+                        // --- CAMBIO 2: Compatibilidad con 'success' o 'valid' ---
+                        const isValid = (json && (json.success === true || json.valid === true));
+
+                        if (isValid) {
+                            // Guardamos en caché si es válido
+                            licenseCache = { token: tokenLimpio, isValid: isValid, lastCheck: Date.now() };
+                        }
+
+                        resolve({
+                            valid: isValid,
+                            reason: isValid ? null : (json.message || "Licencia inválida")
+                        });
+
+                    } catch (e) {
+                        console.error("Error parseando JSON:", data);
+                        resolve({ valid: false, reason: "Error de datos del servidor" });
+                    }
                 });
             });
-            request.on('error', () => resolve({ valid: false, reason: "Error de conexión" }));
+
+            request.on('error', (error) => {
+                console.error("Error de conexión:", error);
+                resolve({ valid: false, reason: "Error de conexión con el servidor" });
+            });
+
             request.end();
         });
     };

@@ -230,7 +230,7 @@ function App() {
                         {activeTab === 'config' && <ConfigTab onShowToast={addToast} />}
                         {activeTab === 'test' && <TestTab />}
                     </div>
-                    <div className="footer">✨ TikBattle OS v{appVersion} - Licencia Activa ✅ - by jinchu</div>
+                    <div className="footer">✨ Battle Interactive v{appVersion} - Licencia Activa ✅ - by jinchu</div>
                 </div>
             </div>
             <ToastContainer toasts={toasts} />
