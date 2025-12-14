@@ -1,6 +1,6 @@
 {
   "name": "battle-interactive",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "Panel de programacion de batallas y overlay tiktok Live",
   "main": "src/main/main.js",
   "homepage": "./",
@@ -38,7 +38,7 @@
   },
   "build": {
     "appId": "com.jinchu.tiktokbattle",
-    "productName": "TikTok Battle Overlay",
+    "productName": "Battle Interactive",
     "extends": null,
     "publish": [
       {
