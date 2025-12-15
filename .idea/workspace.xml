@@ -7,6 +7,7 @@
     <list default="true" id="4aaf179b-1df9-453d-aaaf-787ea95cd5b9" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ui/components/LicenseModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/components/LicenseModal.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -92,7 +93,8 @@
       <workItem from="1765481910277" duration="381000" />
       <workItem from="1765482331099" duration="1834000" />
       <workItem from="1765573943202" duration="613000" />
-      <workItem from="1765736676321" duration="3356000" />
+      <workItem from="1765736676321" duration="3922000" />
+      <workItem from="1765757513830" duration="111000" />
     </task>
     <servers />
   </component>

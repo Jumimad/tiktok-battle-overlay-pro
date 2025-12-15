@@ -31,7 +31,7 @@ const LicenseModal = ({ onLoginSuccess }) => {
             <div className="license-box">
                 <div className="license-icon">🔒</div>
                 <h2>Activación Requerida</h2>
-                <p>Por favor, ingresa tu Token de Acceso para utilizar <b>TikBattle OS</b>.</p>
+                <p>Por favor, ingresa tu Token de Acceso para utilizar <b>Battle Interactive </b>.</p>
 
                 <form onSubmit={handleSubmit}>
                     <input
