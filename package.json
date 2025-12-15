@@ -1,6 +1,6 @@
 {
   "name": "battle-interactive",
-  "version": "2.0.10",
+  "version": "2.0.11",
   "description": "Panel de programacion de batallas y overlay tiktok Live",
   "main": "src/main/main.js",
   "homepage": "./",

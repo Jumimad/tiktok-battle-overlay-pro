@@ -19,18 +19,26 @@ function App() {
     const [isLicensed, setIsLicensed] = useState(null);
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
     const [toasts, setToasts] = useState([]);
-    const [showSessionModal, setShowSessionModal] = useState(false);
 
     // --- ESTADO PARA LA VERSIÓN ---
     const [appVersion, setAppVersion] = useState('Loading...');
 
-    // --- ESTADO PARA ACTUALIZACIONES ---
-    const [updateInfo, setUpdateInfo] = useState(null);
+    // --- GESTOR DE MODALES GLOBAL ---
+    const [globalModal, setGlobalModal] = useState({
+        show: false,
+        type: 'info', // info, success, warning, update
+        title: '',
+        message: '',
+        onConfirm: null,
+        onCancel: null,
+        confirmText: 'Aceptar',
+        cancelText: 'Cancelar',
+        showCancel: true
+    });
 
     // Estado global de datos (Sync entre pestañas)
     const [globalStats, setGlobalStats] = useState({ taps: 0, diamonds: 0, shares: 0 });
 
-    const hasShownSessionModal = useRef(false);
     const ipcRenderer = getIpc();
 
     const addToast = (message, type = 'info') => {
@@ -39,17 +47,35 @@ function App() {
         setTimeout(() => { setToasts(prev => prev.filter(t => t.id !== id)); }, 3000);
     };
 
+    // --- FUNCIONES PARA MOSTRAR MODALES ---
+    const closeModal = () => setGlobalModal({ ...globalModal, show: false });
+
+    const showModal = (options) => {
+        setGlobalModal({
+            show: true,
+            type: options.type || 'info',
+            title: options.title || 'Mensaje',
+            message: options.message || '',
+            onConfirm: options.onConfirm || closeModal,
+            onCancel: options.onCancel || closeModal,
+            confirmText: options.confirmText || 'Aceptar',
+            cancelText: options.cancelText || 'Cancelar',
+            showCancel: options.showCancel !== undefined ? options.showCancel : true
+        });
+    };
+
+    // --- LÓGICA DE SESIÓN ---
     const handleNewSession = () => {
         ipcRenderer.send(CHANNELS.BATTLE.RESET_SESSION);
         addToast('Nueva sesión iniciada: Contadores a 0', 'success');
         setGlobalStats({ taps: 0, diamonds: 0, shares: 0 });
-        setShowSessionModal(false);
+        closeModal();
         sessionStorage.setItem('sessionModalShown', 'true');
     };
 
     const handleContinueSession = () => {
         addToast('Continuando sesión anterior', 'info');
-        setShowSessionModal(false);
+        closeModal();
         sessionStorage.setItem('sessionModalShown', 'true');
     };
 
@@ -59,16 +85,23 @@ function App() {
             setIsLicensed(isValid);
             const alreadyShown = sessionStorage.getItem('sessionModalShown');
             if (isValid === true && !alreadyShown) {
-                setShowSessionModal(true);
+                // MODAL INICIO SESIÓN (ESTILO NUEVO)
+                showModal({
+                    type: 'info',
+                    title: '🚀 ¿Iniciar Nueva Transmisión?',
+                    message: 'Puedes reiniciar todos los contadores a cero o continuar con los acumulados de la sesión anterior.',
+                    confirmText: '🗑️ Nueva Sesión',
+                    cancelText: '↩️ Continuar',
+                    onConfirm: handleNewSession,
+                    onCancel: handleContinueSession
+                });
             }
         };
 
         // 2. VERSIÓN DE LA APP
-        const onAppVersion = (e, version) => {
-            setAppVersion(version);
-        };
+        const onAppVersion = (e, version) => { setAppVersion(version); };
 
-        // 3. ESTADO COMPLETO (Al iniciar)
+        // 3. ESTADO COMPLETO Y ACTUALIZACIONES
         const onFullState = (e, fullState) => {
             if (fullState) {
                 setConnectionStatus(fullState.status);
@@ -76,7 +109,6 @@ function App() {
             }
         };
 
-        // 4. ACTUALIZACIÓN EN TIEMPO REAL
         const onStatsUpdate = (e, msg) => {
             if (msg.type === 'APP_STATUS') {
                 setConnectionStatus(msg.data.status);
@@ -95,28 +127,42 @@ function App() {
 
         const onConfigUpdated = () => { addToast('Configuración Guardada', 'success'); };
 
-        // --- 5. LOGICA DE ACTUALIZACIÓN ---
+        // --- 4. SISTEMA DE ACTUALIZACIONES (AHORA CON MODALES PROPIOS) ---
+
+        // A) Update Disponible
         const onUpdateAvailable = (event, version) => {
-            setUpdateInfo(version); // Mostrar modal azul
+            showModal({
+                type: 'update',
+                title: '⬇️ Actualización Disponible',
+                message: `La versión ${version} está lista para descargar. Trae mejoras de rendimiento y nuevos features.`,
+                confirmText: '📥 Descargar e Instalar',
+                cancelText: 'Ignorar',
+                onConfirm: () => {
+                    ipcRenderer.send('start-download');
+                    closeModal();
+                    addToast('Descargando actualización en segundo plano...', 'info');
+                }
+            });
         };
 
-        // NUEVO: Escuchar progreso de descarga
+        // B) Progreso
         const onDownloadProgress = (event, progressObj) => {
-            // Solo mostramos toast cada 20% para no saturar
             const p = Math.floor(progressObj.percent);
-            if(p % 20 === 0 && p > 0) {
-                console.log(`Descargando update: ${p}%`);
-            }
+            if(p % 20 === 0 && p > 0) console.log(`Descargando update: ${p}%`);
         };
 
+        // C) Descarga Lista -> INSTALAR
         const onUpdateDownloaded = () => {
-            // Forzar pregunta de instalación
-            const resp = window.confirm("¡Actualización descargada exitosamente! 🚀\n\n¿Quieres reiniciar el programa ahora para instalarla?");
-            if (resp) {
-                ipcRenderer.send('install-update');
-            } else {
-                addToast("La actualización se instalará la próxima vez que abras la app.", 'info');
-            }
+            showModal({
+                type: 'success',
+                title: '🚀 Instalación Lista',
+                message: 'La actualización se ha descargado correctamente. La aplicación necesita reiniciarse para aplicar los cambios.',
+                confirmText: '🔄 Reiniciar Ahora',
+                cancelText: 'Más tarde',
+                onConfirm: () => {
+                    ipcRenderer.send('install-update');
+                }
+            });
         };
 
         // SUSCRIPCIONES
@@ -128,7 +174,7 @@ function App() {
 
         // Listeners del Update
         ipcRenderer.on('update_available', onUpdateAvailable);
-        ipcRenderer.on('download-progress', onDownloadProgress); // <--- NUEVO
+        ipcRenderer.on('download-progress', onDownloadProgress);
         ipcRenderer.on('update_downloaded', onUpdateDownloaded);
 
         // LLAMADAS INICIALES
@@ -157,52 +203,36 @@ function App() {
             default: return { label: 'OFFLINE', color: 'status-disconnected' };
         }
     };
-
     const statusUI = getStatusUI();
 
     if (isLicensed === null) return ( <div className="app-background"><div className="glass-container">Cargando...</div></div> );
-    if (isLicensed === false) return ( <div className="app-background"><LicenseModal onLoginSuccess={() => { setIsLicensed(true); if(!sessionStorage.getItem('sessionModalShown')) setShowSessionModal(true); }} /></div> );
+    if (isLicensed === false) return ( <div className="app-background"><LicenseModal onLoginSuccess={() => { setIsLicensed(true); if(!sessionStorage.getItem('sessionModalShown')) handleNewSession(); }} /></div> );
 
     return (
         <div className="app-background">
             <div className="ambient-orb orb-1"></div>
             <div className="ambient-orb orb-2"></div>
 
-            {/* MODAL DE ACTUALIZACIÓN */}
-            {updateInfo && (
-                <div className="license-overlay" style={{zIndex: 100000}}>
-                    <div className="license-box" style={{border: '2px solid #00CCFF'}}>
-                        <div style={{fontSize: 40, marginBottom: 10}}>⬇️</div>
-                        <h2>¡Actualización Disponible!</h2>
-                        <p>La versión <b>{updateInfo}</b> está lista para descargar.</p>
-                        <p style={{fontSize: 12, opacity: 0.7}}>Mejoras de rendimiento y nuevos features.</p>
-
-                        <div style={{display:'flex', gap:10, marginTop: 20}}>
-                            <button className="btn btn-primary" style={{flex:1, padding: 15}} onClick={() => {
-                                ipcRenderer.send('start-download');
-                                setUpdateInfo(null); // Ocultar mientras baja
-                                addToast('Descargando en segundo plano... Por favor espera.', 'info');
-                            }}>
-                                📥 Descargar e Instalar
+            {/* --- COMPONENTE VISUAL DEL MODAL GLOBAL --- */}
+            {globalModal.show && (
+                <div className="custom-modal-overlay">
+                    <div className="custom-modal-box">
+                        <span className="modal-icon">
+                            {globalModal.type === 'update' ? '⬇️' :
+                                globalModal.type === 'success' ? '✅' :
+                                    globalModal.type === 'warning' ? '⚠️' : 'ℹ️'}
+                        </span>
+                        <div className="modal-title">{globalModal.title}</div>
+                        <div className="modal-message">{globalModal.message}</div>
+                        <div className="modal-buttons">
+                            {globalModal.showCancel && (
+                                <button className="btn-modal btn-cancel" onClick={globalModal.onCancel}>
+                                    {globalModal.cancelText}
+                                </button>
+                            )}
+                            <button className="btn-modal btn-confirm" onClick={globalModal.onConfirm}>
+                                {globalModal.confirmText}
                             </button>
-                            <button className="btn btn-dark" style={{flex:1, padding: 15}} onClick={() => setUpdateInfo(null)}>
-                                Ignorar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL DE SESIÓN */}
-            {showSessionModal && (
-                <div className="license-overlay" style={{zIndex: 99999}}>
-                    <div className="license-box" style={{width: 500, border: '1px solid var(--neon-blue)'}}>
-                        <div style={{fontSize: 50, marginBottom: 10}}>🚀</div>
-                        <h2>¿Iniciar Nueva Transmisión?</h2>
-                        <p>Puedes reiniciar todos los contadores a cero o continuar con los acumulados de la sesión anterior.</p>
-                        <div style={{display:'flex', gap: 15, marginTop: 30}}>
-                            <button className="btn btn-info" style={{flex:1, padding: 15}} onClick={handleContinueSession}>↩️ Continuar</button>
-                            <button className="btn btn-danger" style={{flex:1, padding: 15}} onClick={handleNewSession}>🗑️ Nueva</button>
                         </div>
                     </div>
                 </div>
@@ -230,7 +260,7 @@ function App() {
                         {activeTab === 'config' && <ConfigTab onShowToast={addToast} />}
                         {activeTab === 'test' && <TestTab />}
                     </div>
-                    <div className="footer">✨ Battle Interactive v{appVersion} - Licencia Activa ✅ - by jinchu</div>
+                    <div className="footer">✨ TikBattle OS v{appVersion} - Licencia Activa ✅ - by jinchu</div>
                 </div>
             </div>
             <ToastContainer toasts={toasts} />
