@@ -636,3 +636,82 @@ input:checked + .toggle-label::after { transform: translateX(20px); }
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
+
+
+/* === ESTILOS PARA EL MENU DESPLEGABLE (SELECT) === */
+.cyber-select {
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    backdrop-filter: blur(5px);
+}
+
+.cyber-select:hover {
+    border-color: #00CCFF;
+    box-shadow: 0 0 8px rgba(0, 204, 255, 0.3);
+}
+
+.cyber-select option {
+    background-color: #1a1a1a;
+    color: #fff;
+    padding: 10px;
+}
+
+/* === ESTILOS PARA EL MODAL DE CONFIRMACIÓN (REEMPLAZO DE WINDOW.CONFIRM) === */
+.custom-modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 99999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.custom-modal-box {
+    background: linear-gradient(135deg, rgba(30, 30, 30, 0.95), rgba(10, 10, 10, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 30px;
+    width: 400px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 204, 255, 0.1);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Borde neón animado */
+.custom-modal-box::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+    background: linear-gradient(90deg, #FF00FF, #00CCFF);
+}
+
+.modal-icon { font-size: 40px; margin-bottom: 15px; display: block; }
+.modal-title { font-size: 20px; font-weight: 800; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.modal-message { font-size: 14px; color: #aaa; margin-bottom: 25px; line-height: 1.5; }
+
+.modal-buttons { display: flex; gap: 15px; justify-content: center; }
+
+.btn-modal {
+    flex: 1; padding: 12px; border: none; border-radius: 8px;
+    font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 12px;
+    transition: transform 0.2s;
+}
+.btn-modal:active { transform: scale(0.95); }
+.btn-confirm { background: #00CCFF; color: black; box-shadow: 0 0 15px rgba(0, 204, 255, 0.4); }
+.btn-cancel { background: rgba(255, 255, 255, 0.1); color: white; }
+.btn-cancel:hover { background: rgba(255, 255, 255, 0.2); }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

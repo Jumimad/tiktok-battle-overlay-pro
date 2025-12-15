@@ -268,12 +268,12 @@ const ConfigTab = ({ onShowToast }) => {
                 <span className="group-title">Diseño del Overlay</span>
                 <div style={{ padding: '10px 0' }}>
                     <Slider label="Ancho Contenedor (%)" field="container_width" min={50} max={100} />
-                    <Slider label="Padding Superior (px)" field="overlay_padding_top" min={0} max={600} />
+                    <Slider label="Padding Superior (px)" field="overlay_padding_top" min={0} max={1000} />
                     <Slider label="Altura Barras (px)" field="bar_height" min={20} max={200} />
                     <hr style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '15px 0' }} />
-                    <Slider label="Tamaño Iconos" field="icon_size" min={20} max={100} />
-                    <Slider label="Tamaño Regalos" field="gift_size" min={10} max={80} />
-                    <Slider label="Tamaño Texto" field="font_size" min={14} max={60} />
+                    <Slider label="Tamaño Iconos" field="icon_size" min={20} max={200} />
+                    <Slider label="Tamaño Regalos" field="gift_size" min={10} max={200} />
+                    <Slider label="Tamaño Texto" field="font_size" min={14} max={200} />
                     <hr style={{ borderColor: 'rgba(255,255,255,0.1)', margin: '15px 0' }} />
                     <Slider label="Tamaño Timer" field="timer_font_size" min={14} max={80} />
                 </div>

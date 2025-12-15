@@ -22,12 +22,25 @@ class GameLogic {
 
         this.saveTimeout = null;
 
-        // Rutas de archivos
+        // --- CORRECCIÓN DE RUTAS: CARPETA 'SESSIONS' ---
         try {
             const userDataPath = app.getPath('userData');
-            this.sessionFile = path.join(userDataPath, 'session_stats.json');
-            this.usersDbFile = path.join(userDataPath, 'session_users.json');
-        } catch (e) { console.error(e); }
+
+            // 1. Crear subcarpeta para que esté ordenado
+            const sessionDir = path.join(userDataPath, 'sessions');
+
+            // Si no existe, la creamos
+            if (!fs.existsSync(sessionDir)) {
+                fs.mkdirSync(sessionDir, { recursive: true });
+            }
+
+            // 2. Guardar archivos DENTRO de esa carpeta
+            this.sessionFile = path.join(sessionDir, 'session_stats.json');
+            this.usersDbFile = path.join(sessionDir, 'session_users.json');
+
+        } catch (e) {
+            console.error("Error configurando rutas de sesión:", e);
+        }
 
         this.loadSession();
     }

@@ -23,8 +23,16 @@ const BattleTab = ({ onShowToast, globalStats }) => {
     // ESTADO: CANTIDAD DE EQUIPOS VISIBLES
     const [teamCount, setTeamCount] = useState(2);
 
-    // --- NUEVO: ESTADO PARA EL EFECTO HIELO ---
+    // ESTADO PARA EL EFECTO HIELO
     const [iceEffect, setIceEffect] = useState(false);
+
+    // ESTADO PARA EL MODAL DE CONFIRMACIÓN
+    const [confirmModal, setConfirmModal] = useState({
+        show: false,
+        title: '',
+        message: '',
+        onConfirm: null
+    });
 
     const ipcRenderer = getIpc();
 
@@ -41,15 +49,11 @@ const BattleTab = ({ onShowToast, globalStats }) => {
             if (config?.allow_gifts_off_timer !== undefined) {
                 setAllowGiftsOffTimer(config.allow_gifts_off_timer);
             }
-            // Cargar estado del hielo
             if (config?.ice_effect !== undefined) {
                 setIceEffect(config.ice_effect);
             }
-
-            // Detectar cuántos equipos hay activos para ajustar el selector al cargar
             if (config?.teams) {
                 const activeCount = config.teams.filter(t => t.active).length;
-                // AJUSTE: Permitimos que el mínimo sea 1 equipo (para modo Solo)
                 setTeamCount(activeCount < 1 ? 2 : (activeCount > MAX_TEAMS ? MAX_TEAMS : activeCount));
             }
         };
@@ -73,7 +77,18 @@ const BattleTab = ({ onShowToast, globalStats }) => {
         };
     }, []);
 
-    // --- NUEVO: MANEJADOR DEL EFECTO HIELO ---
+    // --- FUNCIONES AUXILIARES DEL MODAL ---
+    const closeConfirmModal = () => setConfirmModal({ ...confirmModal, show: false });
+
+    const showConfirm = (title, message, action) => {
+        setConfirmModal({
+            show: true,
+            title,
+            message,
+            onConfirm: action
+        });
+    };
+
     const handleIceEffectChange = (checked) => {
         setIceEffect(checked);
         setFullConfig(prev => {
@@ -83,70 +98,88 @@ const BattleTab = ({ onShowToast, globalStats }) => {
         });
     };
 
-    // --- MANEJADOR DE CANTIDAD DE EQUIPOS ---
     const handleTeamCountChange = (count) => {
         setTeamCount(count);
-
-        // Si cambiamos a algo que no sea 2, apagamos el hielo por seguridad visual
         if (count !== 2 && iceEffect) handleIceEffectChange(false);
 
         setFullConfig(prevConfig => {
             const updatedTeams = [...(prevConfig.teams || [])];
-
-            // Aseguramos que existan equipos hasta el máximo posible
             for(let i=0; i < MAX_TEAMS; i++) {
-                if(!updatedTeams[i]) {
-                    updatedTeams[i] = {
-                        id: `team${i+1}`,
-                        name: `Equipo ${i+1}`,
-                        color: '#ffffff',
-                        active: false
-                    };
-                }
+                if(!updatedTeams[i]) updatedTeams[i] = { id: `team${i+1}`, name: `Equipo ${i+1}`, color: '#ffffff', active: false };
             }
-
-            // Activamos solo la cantidad seleccionada (count)
-            updatedTeams.forEach((team, index) => {
-                team.active = index < count;
-            });
-
+            updatedTeams.forEach((team, index) => { team.active = index < count; });
             const newConfig = { ...prevConfig, teams: updatedTeams };
             ipcRenderer.send(CHANNELS.CONFIG.SAVE, newConfig);
             return newConfig;
         });
     };
 
-    // --- MANEJADOR DE CAMBIOS DE EQUIPO ---
     const handleTeamChange = (index, field, value) => {
         setFullConfig(prevConfig => {
             const updatedTeams = [...(prevConfig.teams || [])];
-            if (!updatedTeams[index]) {
-                updatedTeams[index] = { id: `team${index+1}`, name: `Equipo ${index+1}`, color: '#ffffff', active: true };
-            }
+            if (!updatedTeams[index]) updatedTeams[index] = { id: `team${index+1}`, name: `Equipo ${index+1}`, color: '#ffffff', active: true };
 
-            // 1. Guardar el valor específico
             updatedTeams[index] = { ...updatedTeams[index], [field]: value };
 
-            // 2. Lógica para ICONOS DE REGALOS
             if (field.startsWith('giftName')) {
                 const g = gifts.find(gx => gx.name === value);
                 const iconUrl = g ? g.icon_url : '';
-
-                // A. Guardar el icono específico (ej: giftIcon_low)
                 const suffix = field.includes('_') ? '_' + field.split('_')[1] : '';
                 updatedTeams[index][`giftIcon${suffix}`] = iconUrl;
-
-                // B. Compatibilidad Overlay: El regalo 'high' define el icono principal legacy
                 if (field === 'giftName_high') {
                     updatedTeams[index].giftName = value;
                     updatedTeams[index].giftIcon = iconUrl;
                 }
             }
-
             const newConfig = { ...prevConfig, teams: updatedTeams };
             ipcRenderer.send(CHANNELS.CONFIG.SAVE, newConfig);
             return newConfig;
         });
+    };
+
+    // --- FUNCIÓN SWAP ---
+    const swapTeams = (currentIndex, targetIndexStr) => {
+        const targetIndex = parseInt(targetIndexStr);
+        if (isNaN(targetIndex) || targetIndex === currentIndex) return;
+
+        // Buscamos el nombre del equipo objetivo para el mensaje
+        const targetTeamName = (fullConfig.teams && fullConfig.teams[targetIndex]?.name)
+            ? fullConfig.teams[targetIndex].name
+            : `Equipo ${targetIndex + 1}`;
+
+        showConfirm(
+            "🔄 Intercambio de Equipos",
+            `¿Estás seguro de cargar los datos de "${targetTeamName}" en esta posición?`,
+            () => {
+                setFullConfig(prevConfig => {
+                    const updatedTeams = [...(prevConfig.teams || [])];
+                    if (!updatedTeams[targetIndex]) updatedTeams[targetIndex] = { id: `team${targetIndex+1}`, name: `Equipo ${targetIndex+1}`, color: '#ffffff', active: false };
+                    if (!updatedTeams[currentIndex]) updatedTeams[currentIndex] = { id: `team${currentIndex+1}`, name: `Equipo ${currentIndex+1}`, color: '#ffffff', active: true };
+
+                    const sourceTeam = updatedTeams[targetIndex];
+                    updatedTeams[currentIndex] = {
+                        ...updatedTeams[currentIndex],
+                        name: sourceTeam.name,
+                        color: sourceTeam.color,
+                        icon: sourceTeam.icon,
+                        giftName: sourceTeam.giftName,
+                        giftIcon: sourceTeam.giftIcon,
+                        giftName_low: sourceTeam.giftName_low,
+                        giftIcon_low: sourceTeam.giftIcon_low,
+                        giftName_mid: sourceTeam.giftName_mid,
+                        giftIcon_mid: sourceTeam.giftIcon_mid,
+                        giftName_high: sourceTeam.giftName_high,
+                        giftIcon_high: sourceTeam.giftIcon_high
+                    };
+
+                    const newConfig = { ...prevConfig, teams: updatedTeams };
+                    ipcRenderer.send(CHANNELS.CONFIG.SAVE, newConfig);
+                    if(onShowToast) onShowToast(`Datos de "${targetTeamName}" cargados`, 'success');
+                    return newConfig;
+                });
+                closeConfirmModal();
+            }
+        );
     };
 
     const handleAllowGiftsChange = (checked) => {
@@ -165,10 +198,15 @@ const BattleTab = ({ onShowToast, globalStats }) => {
     };
 
     const handleNewSession = () => {
-        if(window.confirm("¿Seguro? Esto borrará todos los datos acumulados.")) {
-            ipcRenderer.send(CHANNELS.BATTLE.RESET_SESSION);
-            if(onShowToast) onShowToast('Sesión reiniciada', 'success');
-        }
+        showConfirm(
+            "⚠️ Reinicio de Emergencia",
+            "¿Seguro que deseas borrar todos los datos acumulados de esta sesión?",
+            () => {
+                ipcRenderer.send(CHANNELS.BATTLE.RESET_SESSION);
+                if(onShowToast) onShowToast('Sesión reiniciada', 'success');
+                closeConfirmModal();
+            }
+        );
     };
 
     const addTime = (secs) => ipcRenderer.send(CHANNELS.BATTLE.ADD_TIME, secs);
@@ -178,8 +216,22 @@ const BattleTab = ({ onShowToast, globalStats }) => {
 
     return (
         <div className="battle-tab">
+            {confirmModal.show && (
+                <div className="custom-modal-overlay">
+                    <div className="custom-modal-box">
+                        <span className="modal-icon">❓</span>
+                        <div className="modal-title">{confirmModal.title}</div>
+                        <div className="modal-message">{confirmModal.message}</div>
+                        <div className="modal-buttons">
+                            <button className="btn-modal btn-cancel" onClick={closeConfirmModal}>Cancelar</button>
+                            <button className="btn-modal btn-confirm" onClick={confirmModal.onConfirm}>Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="row" style={{ alignItems: 'stretch', marginBottom: 20 }}>
-                {/* --- SECCIÓN SUPERIOR (ESTADÍSTICAS Y TIEMPO) --- */}
+                {/* ... (SECCIONES DE ESTADÍSTICAS Y TIEMPO - SIN CAMBIOS) ... */}
                 <div className="col" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 20 }}>
                     <div className="group-box" style={{ marginBottom: 0 }}>
                         <span className="group-title">Estadísticas de Transmisión</span>
@@ -242,8 +294,6 @@ const BattleTab = ({ onShowToast, globalStats }) => {
                     <span className="group-title" style={{margin:0}}>Escuadrón de Batalla</span>
 
                     <div style={{display:'flex', alignItems:'center', gap: 15}}>
-
-                        {/* --- BOTÓN EFECTO HIELO (NUEVO) --- */}
                         {teamCount === 2 && (
                             <div style={{display:'flex', alignItems:'center', background: iceEffect ? '#00CCFF' : 'rgba(255,255,255,0.1)', padding:'5px 10px', borderRadius:8, transition:'0.3s'}}>
                                 <span style={{fontSize:12, marginRight:8, fontWeight:'bold', color: iceEffect ? '#000' : '#aaa'}}>❄️ Efecto Hielo</span>
@@ -253,61 +303,57 @@ const BattleTab = ({ onShowToast, globalStats }) => {
                                 </label>
                             </div>
                         )}
-
                         <div style={{display:'flex', gap: 5, alignItems:'center', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '8px', flexWrap: 'wrap'}}>
                             <span style={{fontSize: 12, color: '#aaa', paddingLeft: 5, paddingRight: 5}}>Equipos:</span>
                             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                                <button
-                                    key={num}
-                                    onClick={() => handleTeamCountChange(num)}
-                                    style={{
-                                        background: teamCount === num ? 'var(--neon-blue)' : 'transparent',
-                                        color: teamCount === num ? 'white' : '#aaa',
-                                        border: 'none', borderRadius: '6px', padding: '4px 8px',
-                                        cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s', fontSize: '12px'
-                                    }}
-                                >
-                                    {num}
-                                </button>
+                                <button key={num} onClick={() => handleTeamCountChange(num)} style={{background: teamCount === num ? 'var(--neon-blue)' : 'transparent', color: teamCount === num ? 'white' : '#aaa', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.2s', fontSize: '12px'}}>{num}</button>
                             ))}
                         </div>
                     </div>
                 </div>
 
                 <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(320px, 1fr))', gap:'15px'}}>
-                    {/* Renderizamos solo la cantidad seleccionada */}
                     {Array.from({ length: teamCount }).map((_, idx) => {
                         const team = (fullConfig.teams && fullConfig.teams[idx]) || { name:`Equipo ${idx+1}`, color:'#fff', active:true };
 
                         return (
                             <div key={idx} className={`team-card active`} style={{ position: 'relative', zIndex: 50 - idx }}>
-                                <div className="team-card-header">
-                                    <span className="team-badge" style={{color: team.color}}>EQ {idx+1}</span>
-                                    <div style={{width: 10, height: 10, borderRadius: '50%', background: '#32d74b', boxShadow: '0 0 5px #32d74b'}}></div>
+                                <div className="team-card-header" style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                                    <div style={{display:'flex', alignItems:'center', gap: 10}}>
+                                        <span className="team-badge" style={{color: team.color}}>EQ {idx+1}</span>
+                                        <div style={{width: 10, height: 10, borderRadius: '50%', background: '#32d74b', boxShadow: '0 0 5px #32d74b'}}></div>
+                                    </div>
+
+                                    {/* --- SELECT CON NOMBRES REALES --- */}
+                                    <select
+                                        className="cyber-select"
+                                        value=""
+                                        onChange={(e) => swapTeams(idx, e.target.value)}
+                                    >
+                                        <option value="" disabled>🔄 Cargar otro...</option>
+                                        {[...Array(MAX_TEAMS)].map((_, i) => {
+                                            if (i === idx) return null; // No mostrar el equipo actual
+
+                                            // Lógica para obtener el nombre real
+                                            const teamData = fullConfig.teams && fullConfig.teams[i];
+                                            const teamName = (teamData && teamData.name) ? teamData.name : `Equipo ${i+1}`;
+
+                                            return (
+                                                <option key={i} value={i}>Cargar {teamName}</option>
+                                            );
+                                        })}
+                                    </select>
                                 </div>
+
                                 <div style={{display:'flex', gap:10, marginBottom:15, alignItems: 'center'}}>
                                     <input type="text" value={team.name||''} onChange={e=>handleTeamChange(idx, 'name', e.target.value)} placeholder="Nombre del Equipo" style={{flex:1}}/>
                                     <div style={{position: 'relative', width: 40, height: 40, borderRadius: '50%', backgroundColor: team.color || '#ffffff', border: '2px solid rgba(255,255,255,0.3)', overflow: 'hidden', cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 5px rgba(0,0,0,0.2)'}} title="Color del Equipo"><input type="color" value={team.color||'#ffffff'} onChange={e=>handleTeamChange(idx, 'color', e.target.value)} style={{position: 'absolute', top: '-50%', left: '-50%', width: '200%', height: '200%', opacity: 0, cursor: 'pointer'}} /></div>
                                 </div>
 
-                                {/* 3 NIVELES DE REGALOS */}
                                 <div style={{display:'flex', flexDirection:'column', gap:8, marginBottom:15, position:'relative', zIndex: 100 - idx, background: 'rgba(0,0,0,0.2)', padding:10, borderRadius:12}}>
-
-                                    <div>
-                                        <div style={{fontSize: 10, color: '#83F3FF', marginBottom: 3, fontWeight:'bold', textTransform:'uppercase'}}>🔹 Regalo Bajo</div>
-                                        <GiftSelect options={gifts} value={team.giftName_low} onChange={(val) => handleTeamChange(idx, 'giftName_low', val)} />
-                                    </div>
-
-                                    <div>
-                                        <div style={{fontSize: 10, color: '#FC5895', marginBottom: 3, fontWeight:'bold', textTransform:'uppercase'}}>🔸 Regalo Medio</div>
-                                        <GiftSelect options={gifts} value={team.giftName_mid} onChange={(val) => handleTeamChange(idx, 'giftName_mid', val)} />
-                                    </div>
-
-                                    <div>
-                                        <div style={{fontSize: 10, color: '#FFD700', marginBottom: 3, fontWeight:'bold', textTransform:'uppercase'}}>👑 Regalo Grande (Meta)</div>
-                                        <GiftSelect options={gifts} value={team.giftName_high} onChange={(val) => handleTeamChange(idx, 'giftName_high', val)} />
-                                    </div>
-
+                                    <div><div style={{fontSize: 10, color: '#83F3FF', marginBottom: 3, fontWeight:'bold', textTransform:'uppercase'}}>🔹 Regalo Bajo</div><GiftSelect options={gifts} value={team.giftName_low} onChange={(val) => handleTeamChange(idx, 'giftName_low', val)} /></div>
+                                    <div><div style={{fontSize: 10, color: '#FC5895', marginBottom: 3, fontWeight:'bold', textTransform:'uppercase'}}>🔸 Regalo Medio</div><GiftSelect options={gifts} value={team.giftName_mid} onChange={(val) => handleTeamChange(idx, 'giftName_mid', val)} /></div>
+                                    <div><div style={{fontSize: 10, color: '#FFD700', marginBottom: 3, fontWeight:'bold', textTransform:'uppercase'}}>👑 Regalo Grande (Meta)</div><GiftSelect options={gifts} value={team.giftName_high} onChange={(val) => handleTeamChange(idx, 'giftName_high', val)} /></div>
                                 </div>
 
                                 <div style={{display:'flex', gap:5}}>

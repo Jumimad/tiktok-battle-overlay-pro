@@ -6,8 +6,11 @@
   <component name="ChangeListManager">
     <list default="true" id="4aaf179b-1df9-453d-aaaf-787ea95cd5b9" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ui/components/LicenseModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/components/LicenseModal.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/services/ApiLogger.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/services/ApiLogger.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/services/GameLogic.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/services/GameLogic.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ui/App.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/App.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ui/components/BattleTab.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/components/BattleTab.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ui/components/ConfigTab.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/components/ConfigTab.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -95,6 +98,7 @@
       <workItem from="1765573943202" duration="613000" />
       <workItem from="1765736676321" duration="3922000" />
       <workItem from="1765757513830" duration="111000" />
+      <workItem from="1765820661609" duration="2020000" />
     </task>
     <servers />
   </component>
